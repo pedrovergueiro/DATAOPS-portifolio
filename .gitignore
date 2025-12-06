@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Dados sensíveis
+*.csv
+*.json
+!requirements.json
+!package.json
+*.log
+*.tmp
+*.bak
+
+# Arquivos de configuração local
+config_maquina.json
+config_size.json
+config_lote.json
+identificacao_maquina.json
+auditoria_producao.json*
+
+# Arquivos de status
+status_maq_*.json
+comando_maq_*.json
+
+# Backups
+backup_*/
+*.backup
+
+# Relatórios
+relatorio_*.txt
+diagnostico_*.json
+dados_coletados_*.json
+info_sistema_*.json
+logs_*.txt
+resultado_comando_*.txt
+teste_conectividade_*.txt
+screenshot_*.png
+
+# Executáveis
+*.exe
+*.spec
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentação temporária
+*.md.tmp

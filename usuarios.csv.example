@@ -1,0 +1,5 @@
+login,senha,tipo,nome_completo
+admin,admin123,Desenvolvedor,Administrador do Sistema
+coordenador,coord123,Coordenador,Coordenador de Produção
+encarregado,enc123,Encarregado,Encarregado de Turno
+operador,oper123,Operador,Operador de Máquina

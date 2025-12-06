@@ -1,0 +1,2 @@
+maquina,lote,numero_caixa,size,peso,rej1_defect,rej1_local,rej2_defect,rej2_local,rej3_defect,rej3_local,percent_cam_d,percent_cam_w,data_hora,origem,justificativa,usuario_reg
+201,LOTE001,1,#1,0.000096,N/A,N/A,N/A,N/A,N/A,N/A,0.5,0.3,2024-12-05 10:00:00,coletor,,operador
