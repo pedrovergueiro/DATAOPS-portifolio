@@ -39,23 +39,39 @@ class BatchConfig:
         }
     
     def salvar_configuracao_lote(self, lote, caixa_atual, total_caixas, caixas_registradas):
-        """Salva configuração do lote"""
+        """Salva configuração do lote - ACEITA QUALQUER TIPO DE LOTE"""
         try:
-            self.lote_atual = lote
-            self.numero_caixa_atual = caixa_atual
-            self.total_caixas_lote = total_caixas
-            self.caixas_registradas = caixas_registradas
+            # Converter para string e aceitar qualquer valor
+            self.lote_atual = str(lote) if lote else ''
+            
+            # Converter números com validação
+            try:
+                self.numero_caixa_atual = int(caixa_atual) if caixa_atual else 0
+                self.total_caixas_lote = int(total_caixas) if total_caixas else 0
+                self.caixas_registradas = int(caixas_registradas) if caixas_registradas else 0
+            except (ValueError, TypeError):
+                print(f"⚠️ Erro ao converter números do lote")
+                return False
             
             config = {
-                'lote': lote,
-                'caixa_atual': caixa_atual,
-                'total_caixas': total_caixas,
-                'caixas_registradas': caixas_registradas,
+                'lote': self.lote_atual,
+                'caixa_atual': self.numero_caixa_atual,
+                'total_caixas': self.total_caixas_lote,
+                'caixas_registradas': self.caixas_registradas,
                 'ultima_atualizacao': datetime.datetime.now().isoformat()
             }
-            with open(self.lote_path, 'w') as f:
-                json.dump(config, f)
+            
+            # Garantir que diretório existe
+            import os
+            os.makedirs(os.path.dirname(self.lote_path), exist_ok=True)
+            
+            with open(self.lote_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            
+            print(f"✅ Lote salvo: {self.lote_atual} ({self.numero_caixa_atual}/{self.total_caixas_lote})")
             return True
         except Exception as e:
             print(f"❌ Erro salvar lote: {e}")
+            import traceback
+            traceback.print_exc()
             return False

@@ -213,12 +213,21 @@ if __name__ == "__main__":
         
         btn_style = {"font": ("Arial", 11, "bold"), "width": 25, "height": 2}
         
+        def abrir_registro_producao():
+            from gui.registro_fixo import criar_janela_registro_fixa
+            criar_janela_registro_fixa(root, machine_config, batch_config, data_manager)
+        
         tk.Button(botoes_content, text="📝 Registrar Produção", 
-                 command=lambda: messagebox.showinfo("Em Desenvolvimento", "Funcionalidade em desenvolvimento"),
+                 command=abrir_registro_producao,
                  bg="#27ae60", fg="white", **btn_style).pack(pady=5, fill='x')
         
+        def configurar_lote_manual():
+            from gui.registro_fixo import solicitar_novo_lote
+            if solicitar_novo_lote(root, machine_config, batch_config):
+                messagebox.showinfo("Sucesso", "✅ Lote configurado com sucesso!")
+        
         tk.Button(botoes_content, text="📦 Configurar Lote", 
-                 command=lambda: batch_config.salvar_configuracao_lote("TESTE", 1, 100, 0),
+                 command=configurar_lote_manual,
                  bg="#3498db", fg="white", **btn_style).pack(pady=5, fill='x')
         
         tk.Button(botoes_content, text="📊 Dashboard", 

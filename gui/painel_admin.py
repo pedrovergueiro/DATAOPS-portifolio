@@ -100,53 +100,75 @@ def verificar_acesso_admin(root, data_manager):
 def abrir_painel_admin(root, data_manager, machine_config, batch_config, usuario_logado=None):
     """Abre painel administrativo para Coordenador e Encarregado"""
     
+    print("🔓 Abrindo painel administrativo...")
+    
     # Verificar autenticação
     if not usuario_logado:
+        print("🔐 Solicitando autenticação...")
         usuario_logado = verificar_acesso_admin(root, data_manager)
         if not usuario_logado:
+            print("❌ Autenticação falhou")
             return
     
+    print(f"✅ Usuário autenticado: {usuario_logado}")
+    
     # Registrar acesso
-    auditar_acesso_painel(usuario_logado, "Painel Administrativo")
+    try:
+        auditar_acesso_painel(usuario_logado, "Painel Administrativo")
+        print("✅ Acesso auditado")
+    except Exception as e:
+        print(f"⚠️ Erro ao auditar acesso: {e}")
     
     janela_admin = tk.Toplevel(root)
     janela_admin.title(f"👔 Painel Administrativo - {usuario_logado}")
     janela_admin.geometry("1400x900")
     janela_admin.attributes('-topmost', True)
     
+    print("✅ Janela criada")
+    
     # Notebook principal
-    notebook = ttk.Notebook(janela_admin)
-    notebook.pack(fill='both', expand=True, padx=5, pady=5)
-    
-    # ==================== ABA 1: INSERIR DADOS MANUALMENTE ====================
-    tab_inserir = ttk.Frame(notebook)
-    notebook.add(tab_inserir, text="➕ Inserir Dados")
-    
-    criar_aba_inserir_dados(tab_inserir, data_manager, machine_config, batch_config, usuario_logado)
-    
-    # ==================== ABA 2: EDITAR DADOS ====================
-    tab_editar = ttk.Frame(notebook)
-    notebook.add(tab_editar, text="✏️ Editar Dados")
-    
-    criar_aba_editar_dados(tab_editar, data_manager, usuario_logado)
-    
-    # ==================== ABA 3: EXCLUIR DADOS ====================
-    tab_excluir = ttk.Frame(notebook)
-    notebook.add(tab_excluir, text="🗑️ Excluir Dados")
-    
-    criar_aba_excluir_dados(tab_excluir, data_manager, usuario_logado)
-    
-    # ==================== ABA 4: HISTÓRICO DE AUDITORIA ====================
-    tab_auditoria = ttk.Frame(notebook)
-    notebook.add(tab_auditoria, text="📋 Auditoria")
-    
-    criar_aba_auditoria(tab_auditoria, usuario_logado)
-    
-    # ==================== ABA 5: EXPORTAR DADOS ====================
-    tab_exportar = ttk.Frame(notebook)
-    notebook.add(tab_exportar, text="📤 Exportar")
-    
-    criar_aba_exportar(tab_exportar, data_manager, usuario_logado)
+    try:
+        print("📋 Criando notebook...")
+        notebook = ttk.Notebook(janela_admin)
+        notebook.pack(fill='both', expand=True, padx=5, pady=5)
+        
+        # ==================== ABA 1: INSERIR DADOS MANUALMENTE ====================
+        print("➕ Criando aba inserir...")
+        tab_inserir = ttk.Frame(notebook)
+        notebook.add(tab_inserir, text="➕ Inserir Dados")
+        criar_aba_inserir_dados(tab_inserir, data_manager, machine_config, batch_config, usuario_logado)
+        
+        # ==================== ABA 2: EDITAR DADOS ====================
+        print("✏️ Criando aba editar...")
+        tab_editar = ttk.Frame(notebook)
+        notebook.add(tab_editar, text="✏️ Editar Dados")
+        criar_aba_editar_dados(tab_editar, data_manager, usuario_logado)
+        
+        # ==================== ABA 3: EXCLUIR DADOS ====================
+        print("🗑️ Criando aba excluir...")
+        tab_excluir = ttk.Frame(notebook)
+        notebook.add(tab_excluir, text="🗑️ Excluir Dados")
+        criar_aba_excluir_dados(tab_excluir, data_manager, usuario_logado)
+        
+        # ==================== ABA 4: HISTÓRICO DE AUDITORIA ====================
+        print("📋 Criando aba auditoria...")
+        tab_auditoria = ttk.Frame(notebook)
+        notebook.add(tab_auditoria, text="📋 Auditoria")
+        criar_aba_auditoria(tab_auditoria, usuario_logado)
+        
+        # ==================== ABA 5: EXPORTAR DADOS ====================
+        print("📤 Criando aba exportar...")
+        tab_exportar = ttk.Frame(notebook)
+        notebook.add(tab_exportar, text="📤 Exportar")
+        criar_aba_exportar(tab_exportar, data_manager, usuario_logado)
+        
+        print("✅ Painel administrativo carregado com sucesso!")
+        
+    except Exception as e:
+        print(f"❌ Erro ao criar painel: {e}")
+        import traceback
+        traceback.print_exc()
+        messagebox.showerror("Erro", f"Erro ao criar painel administrativo:\n{e}")
 
 
 def criar_aba_inserir_dados(parent, data_manager, machine_config, batch_config, usuario_logado):

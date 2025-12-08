@@ -9,7 +9,7 @@ from config.settings import USERS_FILE
 from config.constants import USUARIOS_PADRAO, COLUNAS_USUARIOS
 
 def verificar_senha_desenvolvedor(root, data_manager: DataManager):
-    """Verifica senha do desenvolvedor - FUNCIONA REDE OU LOCAL"""
+    """Verifica senha do desenvolvedor - FUNCIONA REDE OU LOCAL E EM .EXE"""
     
     def garantir_usuarios():
         """Garante que usuários existam (rede ou local)"""
@@ -31,6 +31,10 @@ def verificar_senha_desenvolvedor(root, data_manager: DataManager):
                 return True
             
             # Verificar se desenvolvedor existe
+            if 'login' not in data_manager.df_users.columns:
+                print("❌ Coluna 'login' não existe!")
+                return False
+                
             dev_user = data_manager.df_users[data_manager.df_users['login'] == 'desenvolvedor']
             if dev_user.empty:
                 print("➕ Adicionando usuário desenvolvedor...")
@@ -92,13 +96,20 @@ def verificar_senha_desenvolvedor(root, data_manager: DataManager):
     def verificar():
         senha = senha_var.get().strip()
         
+        print(f"🔐 Tentando verificar senha: '{senha}'")
+        
+        # Verificar estrutura
         if 'login' not in data_manager.df_users.columns or 'senha' not in data_manager.df_users.columns:
+            print("❌ Estrutura de dados corrompida!")
             messagebox.showerror("Erro", "Estrutura de dados corrompida!")
             return
         
+        # Buscar desenvolvedor
         dev_user = data_manager.df_users[data_manager.df_users['login'] == 'desenvolvedor']
         
+        # Se não existe, criar
         if dev_user.empty:
+            print("➕ Criando usuário desenvolvedor...")
             novo_dev = pd.DataFrame([{
                 'login': 'desenvolvedor',
                 'senha': '010524Np@',
@@ -109,16 +120,27 @@ def verificar_senha_desenvolvedor(root, data_manager: DataManager):
             data_manager.df_users = pd.concat([data_manager.df_users, novo_dev], ignore_index=True)
             data_manager.salvar_usuarios()
             dev_user = data_manager.df_users[data_manager.df_users['login'] == 'desenvolvedor']
+            print("✅ Usuário desenvolvedor criado")
         
+        # Verificar senha
         if not dev_user.empty:
-            senha_correta = dev_user.iloc[0]['senha']
+            senha_correta = str(dev_user.iloc[0]['senha']).strip()
+            print(f"🔑 Senha correta: '{senha_correta}'")
+            print(f"🔑 Senha digitada: '{senha}'")
+            print(f"🔑 Comparação: {senha == senha_correta}")
+            
             if senha == senha_correta:
+                print("✅ Senha correta!")
                 resultado[0] = True
                 janela_senha.destroy()
             else:
-                messagebox.showerror("Erro", "Senha incorreta!")
+                print("❌ Senha incorreta!")
+                messagebox.showerror("Erro", f"Senha incorreta!\n\nDica: Verifique maiúsculas/minúsculas")
                 entry_senha.delete(0, tk.END)
                 entry_senha.focus()
+        else:
+            print("❌ Usuário desenvolvedor não encontrado!")
+            messagebox.showerror("Erro", "Usuário desenvolvedor não encontrado!")
     
     tk.Button(frame_principal, text="🔓 Acessar", command=verificar,
              bg="#28a745", fg="white", font=("Arial", 10, "bold"), width=15).pack(pady=10)
