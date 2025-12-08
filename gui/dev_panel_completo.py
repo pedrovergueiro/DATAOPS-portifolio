@@ -14,6 +14,314 @@ from config.constants import TABELA_SIZES
 from utils.machine_id import gerar_id_computador_avancado
 from config.settings import CAMINHO_REDE, CAMINHO_LOCAL
 from gui.user_manager import gerenciar_usuarios
+from ml.predictor import PredicaoInteligente
+
+
+def criar_aba_ia_desenvolvedor(parent, data_manager, machine_config):
+    """Cria aba de IA exclusiva para desenvolvedor com análise de todas as máquinas"""
+    
+    ia = PredicaoInteligente(data_manager)
+    
+    frame_principal = tk.Frame(parent)
+    frame_principal.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    # Header
+    header = tk.Frame(frame_principal, bg='#6f42c1', height=80)
+    header.pack(fill='x', pady=(0, 10))
+    header.pack_propagate(False)
+    
+    tk.Label(header, text="🤖 INTELIGÊNCIA ARTIFICIAL - ANÁLISE COMPLETA", 
+             font=("Arial", 16, "bold"), fg="white", bg='#6f42c1').pack(expand=True)
+    tk.Label(header, text="Análise preditiva de todas as máquinas do sistema", 
+             font=("Arial", 10), fg="white", bg='#6f42c1').pack()
+    
+    # Notebook interno
+    notebook_ia = ttk.Notebook(frame_principal)
+    notebook_ia.pack(fill='both', expand=True)
+    
+    # Sub-aba 1: Visão Geral
+    tab_visao = ttk.Frame(notebook_ia)
+    notebook_ia.add(tab_visao, text="📊 Visão Geral")
+    
+    frame_visao = tk.Frame(tab_visao)
+    frame_visao.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    text_visao = scrolledtext.ScrolledText(frame_visao, font=("Consolas", 9), height=30, wrap=tk.WORD)
+    text_visao.pack(fill='both', expand=True)
+    
+    def gerar_visao_geral():
+        text_visao.delete(1.0, tk.END)
+        text_visao.insert(tk.END, "🔄 Gerando análise completa de todas as máquinas...\n\n")
+        text_visao.update()
+        
+        relatorio = ia.gerar_relatorio_ia()
+        
+        if not relatorio:
+            text_visao.insert(tk.END, "❌ Nenhum dado disponível\n")
+            return
+        
+        # Resumo geral
+        text_visao.insert(tk.END, "="*100 + "\n")
+        text_visao.insert(tk.END, "🤖 RELATÓRIO DE INTELIGÊNCIA ARTIFICIAL - VISÃO GERAL\n")
+        text_visao.insert(tk.END, "="*100 + "\n\n")
+        
+        resumo = relatorio.get('resumo_geral', {})
+        text_visao.insert(tk.END, f"📊 RESUMO GERAL:\n")
+        text_visao.insert(tk.END, f"   Máquinas analisadas: {relatorio.get('maquinas_analisadas', 0)}\n")
+        text_visao.insert(tk.END, f"   Score médio: {resumo.get('score_medio', 0)}%\n")
+        text_visao.insert(tk.END, f"   Melhor máquina: {resumo.get('melhor_maquina', 'N/D')}\n")
+        text_visao.insert(tk.END, f"   Pior máquina: {resumo.get('pior_maquina', 'N/D')}\n")
+        text_visao.insert(tk.END, f"   Total de anomalias: {resumo.get('total_anomalias', 0)}\n")
+        text_visao.insert(tk.END, f"   Total de recomendações: {resumo.get('total_recomendacoes', 0)}\n\n")
+        
+        # Análise por máquina
+        for analise_maq in relatorio.get('analises', []):
+            maquina = analise_maq['maquina']
+            analise = analise_maq['analise']
+            predicao = analise_maq['predicao']
+            anomalias = analise_maq['anomalias']
+            recomendacoes = analise_maq['recomendacoes']
+            
+            text_visao.insert(tk.END, "-"*100 + "\n")
+            text_visao.insert(tk.END, f"🏭 MÁQUINA {maquina}\n")
+            text_visao.insert(tk.END, "-"*100 + "\n\n")
+            
+            # Score
+            score = analise.get('score_qualidade', 0)
+            emoji_score = "🟢" if score >= 80 else "🟡" if score >= 60 else "🔴"
+            text_visao.insert(tk.END, f"{emoji_score} Score de Qualidade: {score}%\n\n")
+            
+            # Defeitos mais comuns
+            defeitos = analise.get('defeitos_mais_comuns', [])
+            if defeitos:
+                text_visao.insert(tk.END, "📋 Top 3 Defeitos:\n")
+                for i, def_info in enumerate(defeitos[:3], 1):
+                    text_visao.insert(tk.END, f"   {i}. {def_info['defeito']} - {def_info['percentual']}% ({def_info['ocorrencias']}x)\n")
+                text_visao.insert(tk.END, "\n")
+            
+            # Predição
+            if predicao and 'defeito_mais_provavel' in predicao:
+                def_prev = predicao['defeito_mais_provavel']
+                text_visao.insert(tk.END, f"🔮 Próximo Defeito Previsto: {def_prev['defeito']} ({def_prev['probabilidade']}%)\n")
+                text_visao.insert(tk.END, f"   Risco: {def_prev['nivel_risco']}\n\n")
+            
+            # Anomalias
+            if anomalias:
+                text_visao.insert(tk.END, f"⚠️ Anomalias Detectadas: {len(anomalias)}\n")
+                anomalias_altas = [a for a in anomalias if a.get('severidade') == 'ALTA']
+                if anomalias_altas:
+                    text_visao.insert(tk.END, f"   🔴 Alta severidade: {len(anomalias_altas)}\n")
+                text_visao.insert(tk.END, "\n")
+            
+            # Recomendações
+            if recomendacoes:
+                text_visao.insert(tk.END, f"💡 Recomendações: {len(recomendacoes)}\n")
+                urgentes = [r for r in recomendacoes if r.get('prioridade') == 'URGENTE']
+                if urgentes:
+                    text_visao.insert(tk.END, f"   🚨 Urgentes: {len(urgentes)}\n")
+                text_visao.insert(tk.END, "\n")
+            
+            # Tendência
+            tendencia = analise.get('tendencia', {})
+            direcao = tendencia.get('direcao', 'N/D')
+            emoji_tend = "📈" if direcao == 'melhorando' else "📉" if direcao == 'piorando' else "➡️"
+            text_visao.insert(tk.END, f"{emoji_tend} Tendência: {direcao}\n\n")
+        
+        text_visao.insert(tk.END, "="*100 + "\n")
+        text_visao.insert(tk.END, "✅ Análise completa gerada com sucesso!\n")
+    
+    tk.Button(frame_visao, text="📊 GERAR ANÁLISE COMPLETA", 
+             command=gerar_visao_geral,
+             bg="#6f42c1", fg="white", font=("Arial", 12, "bold"),
+             width=30, height=2).pack(pady=10)
+    
+    # Sub-aba 2: Análise Individual
+    tab_individual = ttk.Frame(notebook_ia)
+    notebook_ia.add(tab_individual, text="🔍 Análise Individual")
+    
+    frame_individual = tk.Frame(tab_individual)
+    frame_individual.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    # Seleção de máquina
+    frame_sel = tk.Frame(frame_individual)
+    frame_sel.pack(fill='x', pady=10)
+    
+    tk.Label(frame_sel, text="Selecione a máquina:", font=("Arial", 11, "bold")).pack(side='left', padx=10)
+    
+    maquina_var = tk.StringVar()
+    maquinas = list(TABELA_SIZES.keys())
+    combo_maq = ttk.Combobox(frame_sel, textvariable=maquina_var, values=maquinas, 
+                             state="readonly", width=15, font=("Arial", 11))
+    combo_maq.pack(side='left', padx=10)
+    if maquinas:
+        combo_maq.current(0)
+    
+    text_individual = scrolledtext.ScrolledText(frame_individual, font=("Consolas", 9), height=25, wrap=tk.WORD)
+    text_individual.pack(fill='both', expand=True)
+    
+    def analisar_maquina_individual():
+        maquina = maquina_var.get()
+        if not maquina:
+            messagebox.showwarning("Aviso", "Selecione uma máquina!")
+            return
+        
+        text_individual.delete(1.0, tk.END)
+        text_individual.insert(tk.END, f"🔄 Analisando máquina {maquina}...\n\n")
+        text_individual.update()
+        
+        # Análise completa
+        analise = ia.analisar_padroes_maquina(maquina)
+        predicao = ia.prever_proximo_defeito(maquina)
+        anomalias = ia.detectar_anomalias(maquina)
+        recomendacoes = ia.recomendar_acoes(maquina)
+        
+        if not analise:
+            text_individual.insert(tk.END, "❌ Nenhum dado disponível para esta máquina\n")
+            return
+        
+        # Mostrar análise detalhada
+        text_individual.delete(1.0, tk.END)
+        text_individual.insert(tk.END, "="*100 + "\n")
+        text_individual.insert(tk.END, f"🤖 ANÁLISE DETALHADA - MÁQUINA {maquina}\n")
+        text_individual.insert(tk.END, "="*100 + "\n\n")
+        
+        # Score
+        score = analise.get('score_qualidade', 0)
+        text_individual.insert(tk.END, f"📊 SCORE DE QUALIDADE: {score}%\n")
+        if score >= 80:
+            text_individual.insert(tk.END, "   Status: 🟢 EXCELENTE\n\n")
+        elif score >= 60:
+            text_individual.insert(tk.END, "   Status: 🟡 BOM\n\n")
+        else:
+            text_individual.insert(tk.END, "   Status: 🔴 NECESSITA ATENÇÃO\n\n")
+        
+        # Estatísticas
+        text_individual.insert(tk.END, f"📈 ESTATÍSTICAS:\n")
+        text_individual.insert(tk.END, f"   Total de registros: {analise.get('total_registros', 0)}\n")
+        
+        media_rej = analise.get('media_rejeicao', {})
+        text_individual.insert(tk.END, f"   Média CAM-D: {media_rej.get('cam_d', 0)}%\n")
+        text_individual.insert(tk.END, f"   Média CAM-W: {media_rej.get('cam_w', 0)}%\n")
+        text_individual.insert(tk.END, f"   Média Geral: {media_rej.get('media_geral', 0)}%\n\n")
+        
+        # Defeitos mais comuns
+        defeitos = analise.get('defeitos_mais_comuns', [])
+        if defeitos:
+            text_individual.insert(tk.END, "🔴 TOP 5 DEFEITOS MAIS COMUNS:\n")
+            for i, def_info in enumerate(defeitos, 1):
+                text_individual.insert(tk.END, f"   {i}. {def_info['defeito']}\n")
+                text_individual.insert(tk.END, f"      Ocorrências: {def_info['ocorrencias']}x\n")
+                text_individual.insert(tk.END, f"      Percentual: {def_info['percentual']}%\n\n")
+        
+        # Predição
+        if predicao and 'predicoes' in predicao:
+            text_individual.insert(tk.END, "🔮 PREDIÇÃO DE PRÓXIMOS DEFEITOS:\n")
+            for i, pred in enumerate(predicao['predicoes'], 1):
+                text_individual.insert(tk.END, f"   {i}. {pred['defeito']}\n")
+                text_individual.insert(tk.END, f"      Probabilidade: {pred['probabilidade']}%\n")
+                text_individual.insert(tk.END, f"      Risco: {pred['nivel_risco']}\n\n")
+            
+            text_individual.insert(tk.END, f"💡 RECOMENDAÇÃO IA:\n")
+            text_individual.insert(tk.END, f"   {predicao.get('recomendacao', 'N/D')}\n\n")
+        
+        # Anomalias
+        if anomalias:
+            text_individual.insert(tk.END, f"⚠️ ANOMALIAS DETECTADAS ({len(anomalias)}):\n")
+            for i, anom in enumerate(anomalias, 1):
+                text_individual.insert(tk.END, f"   {i}. Tipo: {anom.get('tipo', 'N/D')}\n")
+                text_individual.insert(tk.END, f"      Severidade: {anom.get('severidade', 'N/D')}\n\n")
+        
+        # Recomendações
+        if recomendacoes:
+            text_individual.insert(tk.END, f"💡 RECOMENDAÇÕES ({len(recomendacoes)}):\n")
+            for i, rec in enumerate(recomendacoes, 1):
+                text_individual.insert(tk.END, f"   {i}. [{rec.get('prioridade', 'N/D')}] {rec.get('tipo', 'N/D')}\n")
+                text_individual.insert(tk.END, f"      Ação: {rec.get('acao', 'N/D')}\n")
+                text_individual.insert(tk.END, f"      Impacto: {rec.get('impacto', 'N/D')}\n\n")
+        
+        # Tendência
+        tendencia = analise.get('tendencia', {})
+        text_individual.insert(tk.END, f"📈 TENDÊNCIA:\n")
+        text_individual.insert(tk.END, f"   Direção: {tendencia.get('direcao', 'N/D')}\n")
+        text_individual.insert(tk.END, f"   Variação: {tendencia.get('variacao', 0)}%\n\n")
+        
+        # Horários críticos
+        horarios = analise.get('horarios_criticos', [])
+        if horarios:
+            text_individual.insert(tk.END, "⏰ HORÁRIOS CRÍTICOS:\n")
+            for h in horarios[:3]:
+                text_individual.insert(tk.END, f"   {h['periodo']}: {h['media_rejeicao']}% ({h['registros']} registros)\n")
+        
+        text_individual.insert(tk.END, "\n" + "="*100 + "\n")
+    
+    tk.Button(frame_sel, text="🔍 ANALISAR MÁQUINA", 
+             command=analisar_maquina_individual,
+             bg="#17a2b8", fg="white", font=("Arial", 11, "bold"),
+             width=20, height=2).pack(side='left', padx=10)
+    
+    # Sub-aba 3: Comparativo
+    tab_comparativo = ttk.Frame(notebook_ia)
+    notebook_ia.add(tab_comparativo, text="📊 Comparativo")
+    
+    frame_comp = tk.Frame(tab_comparativo)
+    frame_comp.pack(fill='both', expand=True, padx=10, pady=10)
+    
+    text_comp = scrolledtext.ScrolledText(frame_comp, font=("Consolas", 9), height=30, wrap=tk.WORD)
+    text_comp.pack(fill='both', expand=True)
+    
+    def gerar_comparativo():
+        text_comp.delete(1.0, tk.END)
+        text_comp.insert(tk.END, "🔄 Gerando comparativo de todas as máquinas...\n\n")
+        text_comp.update()
+        
+        # Analisar todas as máquinas
+        maquinas = list(TABELA_SIZES.keys())
+        resultados = []
+        
+        for maq in maquinas:
+            analise = ia.analisar_padroes_maquina(maq)
+            if analise:
+                resultados.append({
+                    'maquina': maq,
+                    'score': analise.get('score_qualidade', 0),
+                    'media_rej': analise.get('media_rejeicao', {}).get('media_geral', 0),
+                    'tendencia': analise.get('tendencia', {}).get('direcao', 'N/D'),
+                    'total_registros': analise.get('total_registros', 0)
+                })
+        
+        if not resultados:
+            text_comp.insert(tk.END, "❌ Nenhum dado disponível\n")
+            return
+        
+        # Ordenar por score
+        resultados.sort(key=lambda x: x['score'], reverse=True)
+        
+        text_comp.delete(1.0, tk.END)
+        text_comp.insert(tk.END, "="*100 + "\n")
+        text_comp.insert(tk.END, "📊 COMPARATIVO DE MÁQUINAS - RANKING DE QUALIDADE\n")
+        text_comp.insert(tk.END, "="*100 + "\n\n")
+        
+        text_comp.insert(tk.END, f"{'Pos':<5} {'Máquina':<10} {'Score':<10} {'Média Rej':<12} {'Tendência':<15} {'Registros':<10}\n")
+        text_comp.insert(tk.END, "-"*100 + "\n")
+        
+        for i, res in enumerate(resultados, 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "  "
+            text_comp.insert(tk.END, f"{emoji} {i:<3} {res['maquina']:<10} {res['score']:<10.2f} {res['media_rej']:<12.2f} {res['tendencia']:<15} {res['total_registros']:<10}\n")
+        
+        text_comp.insert(tk.END, "\n" + "="*100 + "\n")
+        
+        # Estatísticas gerais
+        scores = [r['score'] for r in resultados]
+        text_comp.insert(tk.END, f"\n📈 ESTATÍSTICAS GERAIS:\n")
+        text_comp.insert(tk.END, f"   Score médio: {sum(scores)/len(scores):.2f}%\n")
+        text_comp.insert(tk.END, f"   Melhor score: {max(scores):.2f}% (Máquina {resultados[0]['maquina']})\n")
+        text_comp.insert(tk.END, f"   Pior score: {min(scores):.2f}% (Máquina {resultados[-1]['maquina']})\n")
+        text_comp.insert(tk.END, f"   Total de máquinas: {len(resultados)}\n")
+    
+    tk.Button(frame_comp, text="📊 GERAR COMPARATIVO", 
+             command=gerar_comparativo,
+             bg="#28a745", fg="white", font=("Arial", 12, "bold"),
+             width=30, height=2).pack(pady=10)
 
 
 def abrir_painel_desenvolvedor_completo(root, data_manager, machine_config: MachineConfig, batch_config: BatchConfig):
@@ -318,7 +626,12 @@ def abrir_painel_desenvolvedor_completo(root, data_manager, machine_config: Mach
     
     atualizar_stats()
     
-    # ==================== ABA 5: FERRAMENTAS ====================
+    # ==================== ABA 5: INTELIGÊNCIA ARTIFICIAL ====================
+    tab_ia = ttk.Frame(notebook)
+    notebook.add(tab_ia, text="🤖 IA & Machine Learning")
+    criar_aba_ia_desenvolvedor(tab_ia, data_manager, machine_config)
+    
+    # ==================== ABA 6: FERRAMENTAS ====================
     tab_tools = ttk.Frame(notebook)
     notebook.add(tab_tools, text="🛠️ Ferramentas")
     
