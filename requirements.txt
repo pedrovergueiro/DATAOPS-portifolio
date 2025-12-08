@@ -4,10 +4,15 @@ numpy>=1.21.0
 
 # GUI
 tkinter-tooltip>=2.0.0
+tkcalendar>=1.6.1
 
 # Data Visualization
+matplotlib>=3.5.0
 plotly>=5.0.0
 dash>=2.0.0
+
+# Machine Learning (Opcional - para funcionalidades avançadas)
+scikit-learn>=1.0.0
 
 # System Monitoring
 psutil>=5.8.0

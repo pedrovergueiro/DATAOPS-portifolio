@@ -276,6 +276,14 @@ if __name__ == "__main__":
                  command=lambda: messagebox.showinfo("Logs", f"Total: {len(data_manager.df_log)} registros"),
                  bg="#34495e", fg="white", **btn_admin_style).pack(pady=3, fill='x')
         
+        def abrir_ia():
+            from gui.painel_ia import abrir_painel_ia
+            abrir_painel_ia(root, data_manager, machine_config)
+        
+        tk.Button(admin_content, text="🤖 Inteligência Artificial", 
+                 command=abrir_ia,
+                 bg="#6f42c1", fg="white", **btn_admin_style).pack(pady=3, fill='x')
+        
         # Controles do sistema
         controles_frame = tk.Frame(main_frame, bg='#ecf0f1')
         controles_frame.pack(fill='x', pady=(10, 0))
