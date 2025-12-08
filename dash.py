@@ -1,3 +1,17 @@
+"""
+Dashboard de Análise de Produção Industrial
+
+ALINHAMENTO 100% COM O COLETOR (main.py):
+- Usa as mesmas configurações (config/settings.py)
+- Usa as mesmas constantes (config/constants.py)
+- Usa as mesmas colunas de dados (COLUNAS_DADOS)
+- Usa as mesmas máquinas válidas (MAQUINAS_VALIDAS)
+- Lê do mesmo arquivo CSV (dados_producao.csv)
+- Compatível com a estrutura de dados do coletor
+
+Este dashboard é 100% compatível com os dados gerados pelo sistema de coleta.
+"""
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
@@ -12,12 +26,9 @@ from datetime import datetime, timedelta
 # CONFIGURAÇÕES COMPATÍVEIS COM O COLETOR
 # -----------------------------
 
-# Caminhos idênticos ao coletor
-CAMINHO_REDE = r"Z:\Pedro Vergueiro - melhoria continua\dataSETpfd"
-CSV_FILE = os.path.join(CAMINHO_REDE, "dados_producao.csv")
-
-# Máquinas válidas (igual ao coletor)
-MAQUINAS_VALIDAS = [str(i) for i in range(201, 215)]  # Máquinas 201 a 214
+# Importar configurações do coletor para garantir alinhamento 100%
+from config.settings import CAMINHO_REDE, CSV_FILE
+from config.constants import MAQUINAS_VALIDAS, COLUNAS_DADOS
 
 # Configurar estilo profissional para os gráficos
 plt.style.use('seaborn-v0_8')
@@ -43,25 +54,30 @@ df = None
 # -----------------------------
 
 def carregar_dataframe_seguro(caminho, colunas_padrao=None):
-    """Carrega DataFrame com tratamento robusto de erros - COMPATÍVEL COM COLETOR"""
+    """Carrega DataFrame com tratamento robusto de erros - 100% COMPATÍVEL COM COLETOR"""
     try:
         if os.path.exists(caminho):
             print(f"📁 Carregando CSV de: {caminho}")
             df_temp = pd.read_csv(caminho, dtype=str)
             print(f"✅ CSV carregado: {len(df_temp)} registros")
             
-            # Tratar colunas numéricas
-            for col in ['percent_cam_d', 'percent_cam_w']:
+            # Garantir que todas as colunas do coletor existem
+            for col in COLUNAS_DADOS:
+                if col not in df_temp.columns:
+                    df_temp[col] = '' if col not in ['percent_cam_d', 'percent_cam_w'] else 0.0
+            
+            # Tratar colunas numéricas (mesma lógica do coletor)
+            for col in ['percent_cam_d', 'percent_cam_w', 'peso']:
                 if col in df_temp.columns:
                     df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce').fillna(0.0)
             
-            # Converter data/hora
+            # Converter data/hora (mesma lógica do coletor)
             if 'data_hora' in df_temp.columns:
                 df_temp['data_hora'] = pd.to_datetime(df_temp['data_hora'], errors='coerce')
             
             df_temp = df_temp.dropna(subset=['data_hora']).copy()
             
-            # Filtrar máquinas válidas
+            # Filtrar máquinas válidas (mesma lista do coletor)
             if 'maquina' in df_temp.columns:
                 maquinas_atuais = df_temp['maquina'].unique()
                 print(f"🏭 Máquinas encontradas: {maquinas_atuais.tolist()}")
@@ -72,11 +88,11 @@ def carregar_dataframe_seguro(caminho, colunas_padrao=None):
             
         else:
             print(f"⚠️ Arquivo CSV não encontrado: {caminho}")
-            return pd.DataFrame()
+            return pd.DataFrame(columns=COLUNAS_DADOS)
             
     except Exception as e:
         print(f"❌ Erro ao carregar CSV: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(columns=COLUNAS_DADOS)
 
 def load_data_source():
     """Carrega dados diretamente do CSV na rede - COMPATÍVEL COM COLETOR"""
