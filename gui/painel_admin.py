@@ -201,6 +201,24 @@ def criar_aba_inserir_dados(parent, data_manager, machine_config, batch_config, 
     # Campos do formulário com comboboxes
     row = 0
     
+    # SELEÇÃO DE USUÁRIO (APENAS NO ADMIN)
+    tk.Label(frame_form, text="Usuário:", font=("Arial", 10, "bold")).grid(row=row, column=0, sticky='w', padx=10, pady=5)
+    usuario_var = tk.StringVar()
+    
+    # Obter lista de usuários
+    lista_usuarios = []
+    if data_manager.df_users is not None and len(data_manager.df_users) > 0:
+        lista_usuarios = data_manager.df_users['login'].tolist()
+    
+    combo_usuario = ttk.Combobox(frame_form, textvariable=usuario_var, values=lista_usuarios, 
+                                 state="readonly", width=37, font=("Arial", 10))
+    combo_usuario.grid(row=row, column=1, padx=10, pady=5)
+    
+    if lista_usuarios:
+        combo_usuario.current(0)  # Selecionar primeiro usuário por padrão
+    
+    row += 1
+    
     # Máquina (Combobox)
     tk.Label(frame_form, text="Máquina:", font=("Arial", 10)).grid(row=row, column=0, sticky='w', padx=10, pady=5)
     maquina_var = tk.StringVar()
@@ -209,11 +227,14 @@ def criar_aba_inserir_dados(parent, data_manager, machine_config, batch_config, 
                 width=37, font=("Arial", 10)).grid(row=row, column=1, padx=10, pady=5)
     row += 1
     
-    # Lote (Entry)
-    tk.Label(frame_form, text="Lote:", font=("Arial", 10)).grid(row=row, column=0, sticky='w', padx=10, pady=5)
-    lote_var = tk.StringVar()
-    vars_dict['lote'] = lote_var
-    tk.Entry(frame_form, textvariable=lote_var, width=40, font=("Arial", 10)).grid(row=row, column=1, padx=10, pady=5)
+    # Lote (AUTOMÁTICO - usa lote atual do sistema)
+    config_lote_atual = batch_config.obter_configuracao_lote()
+    lote_atual_sistema = config_lote_atual.get('lote', 'N/D')
+    
+    tk.Label(frame_form, text="Lote (Automático):", font=("Arial", 10)).grid(row=row, column=0, sticky='w', padx=10, pady=5)
+    lote_label = tk.Label(frame_form, text=f"📦 {lote_atual_sistema}", 
+                         font=("Arial", 10, "bold"), fg="#27ae60")
+    lote_label.grid(row=row, column=1, sticky='w', padx=10, pady=5)
     row += 1
     
     # Número da Caixa (Entry)
@@ -272,6 +293,12 @@ def criar_aba_inserir_dados(parent, data_manager, machine_config, batch_config, 
     tk.Entry(frame_form, textvariable=justificativa_var, width=40, font=("Arial", 10)).grid(row=row, column=1, padx=10, pady=5)
     
     def inserir_dados():
+        # Validar usuário selecionado
+        usuario_selecionado = usuario_var.get().strip()
+        if not usuario_selecionado:
+            messagebox.showerror("Erro", "Selecione um usuário!")
+            return
+        
         # Validar justificativa
         justificativa = justificativa_var.get().strip()
         if not justificativa:
@@ -288,15 +315,20 @@ def criar_aba_inserir_dados(parent, data_manager, machine_config, batch_config, 
             dados[var_name] = var.get().strip()
         
         # Validar campos obrigatórios
-        if not dados['maquina'] or not dados['lote']:
-            messagebox.showerror("Erro", "Máquina e Lote são obrigatórios!")
+        if not dados['maquina']:
+            messagebox.showerror("Erro", "Máquina é obrigatória!")
             return
+        
+        # USAR LOTE ATUAL DO SISTEMA (AUTOMÁTICO)
+        config_lote_atual = batch_config.obter_configuracao_lote()
+        lote_atual = config_lote_atual.get('lote', 'N/D')
         
         # Adicionar metadados
         dados['data_hora'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         dados['origem'] = 'manual'
         dados['justificativa'] = justificativa
-        dados['usuario_reg'] = usuario_logado
+        dados['usuario_reg'] = usuario_selecionado  # USUÁRIO SELECIONADO
+        dados['lote'] = lote_atual  # LOTE AUTOMÁTICO DO SISTEMA
         
         # Inserir no DataFrame
         novo_registro = pd.DataFrame([dados])

@@ -284,24 +284,14 @@ def abrir_janela_lancamento_completo(root, machine_config: MachineConfig, batch_
     tk.Label(main_frame, text=f"Lote: {config_lote.get('lote')} | Caixa: {config_lote.get('caixa_atual')}/{config_lote.get('total_caixas')}", 
              font=("Arial", 10, "bold"), fg="#27ae60").pack(pady=5)
     
-    # Seleção de usuário
-    frm_usuario = tk.LabelFrame(main_frame, text="👤 Usuário", font=("Arial", 10, "bold"))
-    frm_usuario.pack(fill='x', pady=10)
-    
-    tk.Label(frm_usuario, text="Selecione o usuário:", font=("Arial", 9)).pack(side='left', padx=5)
-    usuario_var = tk.StringVar()
-    
-    # Obter lista de usuários
-    lista_usuarios = []
+    # USUÁRIO AUTOMÁTICO (não precisa selecionar no lançamento normal)
+    # Usa "operador" como padrão ou primeiro usuário disponível
+    usuario_automatico = "operador"
     if data_manager.df_users is not None and len(data_manager.df_users) > 0:
-        lista_usuarios = data_manager.df_users['login'].tolist()
-    
-    combo_usuario = ttk.Combobox(frm_usuario, textvariable=usuario_var, values=lista_usuarios, 
-                                 state="readonly", width=25, font=("Arial", 10))
-    combo_usuario.pack(side='left', padx=5, pady=5)
-    
-    if lista_usuarios:
-        combo_usuario.current(0)  # Selecionar primeiro usuário por padrão
+        # Tentar usar "operador" primeiro
+        if "operador" not in data_manager.df_users['login'].values:
+            # Se não existir, usar primeiro usuário
+            usuario_automatico = data_manager.df_users['login'].iloc[0]
     
     # Dados de produção
     frm_dados = tk.LabelFrame(main_frame, text="📝 Dados de Produção", font=("Arial", 10, "bold"))
@@ -332,12 +322,7 @@ def abrir_janela_lancamento_completo(root, machine_config: MachineConfig, batch_
     tk.Entry(frm_dados, textvariable=camw_var, width=8).grid(row=4, column=3)
     
     def lancar_dados():
-        """Lança dados de produção"""
-        # Validar usuário selecionado
-        usuario_selecionado = usuario_var.get().strip()
-        if not usuario_selecionado:
-            messagebox.showerror("Erro", "Selecione um usuário!")
-            return
+        """Lança dados de produção - USUÁRIO AUTOMÁTICO"""
         
         try:
             pctd = float(camd_var.get().replace(',','.')) if camd_var.get() else None
@@ -361,7 +346,7 @@ def abrir_janela_lancamento_completo(root, machine_config: MachineConfig, batch_
             'data_hora': data_hora,
             'origem': 'coletor',
             'justificativa': '',
-            'usuario_reg': usuario_selecionado,
+            'usuario_reg': usuario_automatico,  # USUÁRIO AUTOMÁTICO
             'lote': config_lote.get('lote'),
             'numero_caixa': config_lote.get('caixa_atual'),
             'size': CONFIG_SIZE['size'],
