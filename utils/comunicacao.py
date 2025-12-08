@@ -8,6 +8,8 @@ import datetime
 import uuid
 import socket
 import psutil
+import tkinter as tk
+from tkinter import messagebox
 from config.settings import CAMINHO_REDE
 from utils.machine_id import gerar_id_computador_avancado
 
@@ -52,22 +54,25 @@ class SistemaComunicacao:
         print("🔗 Sistema de comunicação parado")
         
     def _loop_comunicacao(self):
-        """Loop principal de comunicação - ENVIA STATUS E VERIFICA COMANDOS A CADA 1ms"""
+        """Loop principal de comunicação - VERIFICA COMANDOS A CADA 1ms (1000x/segundo)"""
         contador = 0
+        contador_status = 0
         while self.executando_comandos:
             try:
-                # ENVIAR STATUS A CADA 1ms (1000x por segundo)
-                self._enviar_status_maquina()
-                
-                # VERIFICAR COMANDOS A CADA 1ms
+                # VERIFICAR COMANDOS A CADA 1ms (PRIORIDADE MÁXIMA)
                 self._verificar_comandos()
                 
-                time.sleep(0.001)  # 1ms
+                # ENVIAR STATUS A CADA 1000ms (1 segundo) para não sobrecarregar
+                if contador % 1000 == 0:
+                    self._enviar_status_maquina()
+                    contador_status += 1
+                
+                time.sleep(0.001)  # 1ms - VERIFICAÇÃO ULTRA RÁPIDA
                 contador += 1
                 
-                # Log a cada 10000 iterações (10 segundos)
-                if contador % 10000 == 0:
-                    print(f"🔗 Comunicação ativa - {contador} ciclos (1ms cada) - Status enviado {contador} vezes")
+                # Log a cada 60000 iterações (60 segundos)
+                if contador % 60000 == 0:
+                    print(f"🔗 Comunicação ativa - {contador} verificações (1ms cada) | Status enviado {contador_status}x")
                 
             except Exception as e:
                 print(f"⚠️ Erro comunicação: {e}")
@@ -150,44 +155,65 @@ class SistemaComunicacao:
             return "127.0.0.1"
             
     def _verificar_comandos(self):
-        """Verifica se há comandos para executar - A CADA 1ms"""
+        """Verifica se há comandos para executar - A CADA 1ms (ULTRA RÁPIDO)"""
         if not self.machine_config:
             return
             
         try:
             MAQUINA_ATUAL = self.machine_config.obter_configuracao_maquina()
-            comando_file = os.path.join(CAMINHO_REDE, f"comando_maq_{MAQUINA_ATUAL}.json")
             
-            if os.path.exists(comando_file):
+            # Verificar REDE primeiro
+            comando_file_rede = os.path.join(CAMINHO_REDE, f"comando_maq_{MAQUINA_ATUAL}.json")
+            
+            # Verificar LOCAL também (fallback)
+            from config.settings import CAMINHO_LOCAL
+            comando_file_local = os.path.join(CAMINHO_LOCAL, f"comando_maq_{MAQUINA_ATUAL}.json")
+            
+            # Tentar rede primeiro, depois local
+            comando_file = None
+            if os.path.exists(comando_file_rede):
+                comando_file = comando_file_rede
+            elif os.path.exists(comando_file_local):
+                comando_file = comando_file_local
+            
+            if comando_file:
+                # Pequeno delay para garantir que arquivo foi escrito completamente
                 time.sleep(0.001)
                 
-                with open(comando_file, 'r', encoding='utf-8') as f:
-                    comando_data = json.load(f)
-                
-                comando_id = comando_data.get('id', '')
-                if comando_id and comando_id not in self.comandos_ativos:
-                    self.comandos_ativos[comando_id] = True
-                    
-                    # Executar comando
-                    self._executar_comando(comando_data)
-                    
-                    self.comandos_executados.append({
-                        'id': comando_id,
-                        'acao': comando_data.get('acao', ''),
-                        'timestamp': datetime.datetime.now().isoformat()
-                    })
-                    
-                    if len(self.comandos_executados) > 50:
-                        self.comandos_executados = self.comandos_executados[-50:]
-                
-                # Remover arquivo de comando após execução
                 try:
-                    os.remove(comando_file)
-                    print(f"✅ Comando executado: {comando_data.get('acao', 'N/A')}")
-                except:
-                    pass
+                    with open(comando_file, 'r', encoding='utf-8') as f:
+                        comando_data = json.load(f)
+                    
+                    comando_id = comando_data.get('id', '')
+                    if comando_id and comando_id not in self.comandos_ativos:
+                        self.comandos_ativos[comando_id] = True
+                        
+                        print(f"🔔 COMANDO RECEBIDO: {comando_data.get('acao', 'N/A')} (ID: {comando_id})")
+                        
+                        # Executar comando IMEDIATAMENTE
+                        self._executar_comando(comando_data)
+                        
+                        self.comandos_executados.append({
+                            'id': comando_id,
+                            'acao': comando_data.get('acao', ''),
+                            'timestamp': datetime.datetime.now().isoformat()
+                        })
+                        
+                        if len(self.comandos_executados) > 50:
+                            self.comandos_executados = self.comandos_executados[-50:]
+                    
+                    # Remover arquivo de comando após execução
+                    try:
+                        os.remove(comando_file)
+                        print(f"✅ Comando executado e arquivo removido: {comando_data.get('acao', 'N/A')}")
+                    except Exception as e:
+                        print(f"⚠️ Erro ao remover arquivo de comando: {e}")
+                        
+                except Exception as e:
+                    print(f"⚠️ Erro ao ler comando: {e}")
                 
-        except:
+        except Exception as e:
+            # Silencioso para não poluir logs
             pass
             
     def _executar_comando(self, comando_data):
@@ -238,11 +264,57 @@ class SistemaComunicacao:
     def _comando_fechar_app(self, parametros):
         """Fecha aplicação"""
         print("🛑 Recebido comando: FECHAR APP")
-        if parametros.get('forcar', False):
-            os._exit(0)
-        else:
-            if self.root_ref:
-                self.root_ref.quit()
+        
+        from tkinter import messagebox
+        
+        # Mostrar confirmação SEMPRE NO TOPO
+        if self.root_ref:
+            # Criar janela de confirmação
+            janela_confirmacao = tk.Toplevel(self.root_ref)
+            janela_confirmacao.title("⚠️ Confirmação")
+            janela_confirmacao.geometry("400x200")
+            janela_confirmacao.attributes('-topmost', True)
+            janela_confirmacao.grab_set()
+            
+            frame = tk.Frame(janela_confirmacao)
+            frame.pack(fill='both', expand=True, padx=20, pady=20)
+            
+            tk.Label(frame, text="⚠️ COMANDO REMOTO RECEBIDO", 
+                    font=("Arial", 14, "bold"), fg="red").pack(pady=10)
+            
+            tk.Label(frame, text="Deseja FECHAR o aplicativo?", 
+                    font=("Arial", 11)).pack(pady=10)
+            
+            resultado = [False]
+            
+            def confirmar():
+                resultado[0] = True
+                janela_confirmacao.destroy()
+                if parametros.get('forcar', False):
+                    os._exit(0)
+                else:
+                    if self.root_ref:
+                        self.root_ref.quit()
+            
+            def cancelar():
+                janela_confirmacao.destroy()
+            
+            btn_frame = tk.Frame(frame)
+            btn_frame.pack(pady=20)
+            
+            tk.Button(btn_frame, text="✅ SIM, FECHAR", command=confirmar,
+                     bg="#dc3545", fg="white", font=("Arial", 11, "bold"), 
+                     width=15, height=2).pack(side='left', padx=5)
+            
+            tk.Button(btn_frame, text="❌ CANCELAR", command=cancelar,
+                     bg="#6c757d", fg="white", font=("Arial", 11, "bold"), 
+                     width=15, height=2).pack(side='left', padx=5)
+            
+            # Centralizar
+            janela_confirmacao.update_idletasks()
+            x = (janela_confirmacao.winfo_screenwidth() - janela_confirmacao.winfo_width()) // 2
+            y = (janela_confirmacao.winfo_screenheight() - janela_confirmacao.winfo_height()) // 2
+            janela_confirmacao.geometry(f"+{x}+{y}")
     
     def _comando_abrir_app(self, parametros):
         """Abre/restaura aplicação"""
