@@ -1,0 +1,5 @@
+[2025-12-11 10:16:01.341107] Sistema iniciado
+[2025-12-11 10:16:01.341127] Configuração carregada
+[2025-12-11 10:16:01.341133] Máquina 201 conectada
+[2025-12-11 10:16:01.341137] Produção iniciada - Lote ABC123
+[2025-12-11 10:16:01.341141] 50 peças processadas

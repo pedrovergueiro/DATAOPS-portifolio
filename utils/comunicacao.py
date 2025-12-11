@@ -41,42 +41,106 @@ class SistemaComunicacao:
     def iniciar_sistema_comunicacao(self):
         """Inicia sistema de envio de status e recebimento de comandos"""
         if self.executando_comandos:
+            print("⚠️ Sistema de comunicação já está ativo")
             return
+            
+        print("🚀 INICIANDO SISTEMA DE COMUNICAÇÃO ULTRA-RÁPIDO...")
+        
+        # Limpar comandos ativos antigos
+        self.comandos_ativos.clear()
+        
+        # Verificar se diretórios existem
+        from config.settings import CAMINHO_LOCAL
+        
+        if os.path.exists(CAMINHO_REDE):
+            print(f"✅ Acesso à REDE: {CAMINHO_REDE}")
+        else:
+            print(f"⚠️ SEM acesso à rede: {CAMINHO_REDE}")
+            
+        if os.path.exists(CAMINHO_LOCAL):
+            print(f"✅ Acesso LOCAL: {CAMINHO_LOCAL}")
+        else:
+            print(f"❌ SEM acesso local: {CAMINHO_LOCAL}")
             
         self.executando_comandos = True
         self.thread_comandos = threading.Thread(target=self._loop_comunicacao, daemon=True)
         self.thread_comandos.start()
-        print("🔗 Sistema de comunicação iniciado (1ms)")
+        
+        print("🔗 Sistema de comunicação INICIADO!")
+        print("⚡ Verificação de comandos: CADA 1ms (1000x por segundo)")
+        print("📊 Envio de status: CADA 1 segundo")
+        print("🎯 PRONTO para receber e executar comandos remotos!")
         
     def parar_sistema_comunicacao(self):
         """Para sistema de comunicação"""
+        print("🛑 PARANDO sistema de comunicação...")
         self.executando_comandos = False
-        print("🔗 Sistema de comunicação parado")
+        
+        # Aguardar thread terminar
+        if self.thread_comandos and self.thread_comandos.is_alive():
+            self.thread_comandos.join(timeout=2)
+            
+        print("🔗 Sistema de comunicação PARADO")
+        
+    def verificar_status_comunicacao(self):
+        """Verifica se o sistema de comunicação está ativo"""
+        return {
+            'ativo': self.executando_comandos,
+            'thread_viva': self.thread_comandos.is_alive() if self.thread_comandos else False,
+            'comandos_executados': len(self.comandos_executados),
+            'ultimo_status': self.ultimo_status.get('timestamp', 'Nunca') if self.ultimo_status else 'Nunca'
+        }
         
     def _loop_comunicacao(self):
         """Loop principal de comunicação - VERIFICA COMANDOS A CADA 1ms (1000x/segundo)"""
         contador = 0
         contador_status = 0
+        contador_comandos_verificados = 0
+        contador_comandos_executados = 0
+        
+        print("🚀 INICIANDO LOOP DE COMUNICAÇÃO ULTRA-RÁPIDO (1ms)")
+        print("📡 Verificando comandos a cada 1 milissegundo")
+        print("📊 Enviando status a cada 1 segundo")
+        
+        # Log para arquivo também
+        try:
+            from utils.logger_executavel import log_info
+            log_info("Sistema de comunicação iniciado - Loop ultra-rápido (1ms)")
+        except:
+            pass
+        
         while self.executando_comandos:
             try:
                 # VERIFICAR COMANDOS A CADA 1ms (PRIORIDADE MÁXIMA)
-                self._verificar_comandos()
+                comando_executado = self._verificar_comandos()
+                contador_comandos_verificados += 1
+                
+                if comando_executado:
+                    contador_comandos_executados += 1
+                    print(f"⚡ COMANDO EXECUTADO! Total executados: {contador_comandos_executados}")
                 
                 # ENVIAR STATUS A CADA 1000ms (1 segundo) para não sobrecarregar
                 if contador % 1000 == 0:
                     self._enviar_status_maquina()
                     contador_status += 1
                 
+                # Sleep mínimo para verificação ultra-rápida
                 time.sleep(0.001)  # 1ms - VERIFICAÇÃO ULTRA RÁPIDA
                 contador += 1
                 
-                # Log a cada 60000 iterações (60 segundos)
-                if contador % 60000 == 0:
-                    print(f"🔗 Comunicação ativa - {contador} verificações (1ms cada) | Status enviado {contador_status}x")
+                # Log detalhado a cada 30000 iterações (30 segundos)
+                if contador % 30000 == 0:
+                    print(f"🔗 COMUNICAÇÃO ATIVA:")
+                    print(f"   ⏱️  {contador} verificações (1ms cada) = {contador/1000:.1f}s ativo")
+                    print(f"   📊 Status enviado {contador_status}x")
+                    print(f"   🔍 Comandos verificados: {contador_comandos_verificados}")
+                    print(f"   ⚡ Comandos executados: {contador_comandos_executados}")
+                    print(f"   🎯 Taxa execução: {(contador_comandos_executados/contador_comandos_verificados*100):.4f}%")
                 
             except Exception as e:
-                print(f"⚠️ Erro comunicação: {e}")
-                time.sleep(0.001)
+                print(f"⚠️ Erro no loop comunicação: {e}")
+                # Continuar mesmo com erro, mas com delay maior
+                time.sleep(0.005)  # 5ms em caso de erro
                 
     def _enviar_status_maquina(self):
         """Envia status da máquina para rede E local"""
@@ -157,64 +221,118 @@ class SistemaComunicacao:
     def _verificar_comandos(self):
         """Verifica se há comandos para executar - A CADA 1ms (ULTRA RÁPIDO)"""
         if not self.machine_config:
-            return
+            return False
             
         try:
             MAQUINA_ATUAL = self.machine_config.obter_configuracao_maquina()
             
-            # Verificar REDE primeiro
+            # Verificar REDE primeiro (prioridade)
             comando_file_rede = os.path.join(CAMINHO_REDE, f"comando_maq_{MAQUINA_ATUAL}.json")
             
             # Verificar LOCAL também (fallback)
             from config.settings import CAMINHO_LOCAL
             comando_file_local = os.path.join(CAMINHO_LOCAL, f"comando_maq_{MAQUINA_ATUAL}.json")
             
-            # Tentar rede primeiro, depois local
-            comando_file = None
+            # Lista de arquivos para verificar (ordem de prioridade)
+            arquivos_comando = []
             if os.path.exists(comando_file_rede):
-                comando_file = comando_file_rede
-            elif os.path.exists(comando_file_local):
-                comando_file = comando_file_local
+                arquivos_comando.append(('REDE', comando_file_rede))
+            if os.path.exists(comando_file_local):
+                arquivos_comando.append(('LOCAL', comando_file_local))
             
-            if comando_file:
-                # Pequeno delay para garantir que arquivo foi escrito completamente
-                time.sleep(0.001)
-                
+            # Processar todos os comandos encontrados
+            comando_executado = False
+            
+            for origem, comando_file in arquivos_comando:
                 try:
+                    # Verificar se arquivo não está vazio e foi escrito completamente
+                    if os.path.getsize(comando_file) == 0:
+                        continue
+                        
+                    # Pequeno delay para garantir escrita completa
+                    time.sleep(0.002)
+                    
                     with open(comando_file, 'r', encoding='utf-8') as f:
                         comando_data = json.load(f)
                     
                     comando_id = comando_data.get('id', '')
+                    acao = comando_data.get('acao', 'N/A')
+                    
+                    # Verificar se comando já foi executado
                     if comando_id and comando_id not in self.comandos_ativos:
                         self.comandos_ativos[comando_id] = True
                         
-                        print(f"🔔 COMANDO RECEBIDO: {comando_data.get('acao', 'N/A')} (ID: {comando_id})")
+                        print(f"🔔 COMANDO RECEBIDO ({origem}): {acao} (ID: {comando_id[:8]}...)")
+                        print(f"📁 Arquivo: {comando_file}")
+                        
+                        # Log detalhado
+                        try:
+                            from utils.logger_executavel import log_info
+                            log_info(f"COMANDO RECEBIDO: {acao} de {origem} (ID: {comando_id})")
+                        except:
+                            pass
                         
                         # Executar comando IMEDIATAMENTE
-                        self._executar_comando(comando_data)
+                        try:
+                            self._executar_comando(comando_data)
+                            print(f"✅ COMANDO EXECUTADO COM SUCESSO: {acao}")
+                            
+                            # Log sucesso
+                            try:
+                                from utils.logger_executavel import log_info
+                                log_info(f"COMANDO EXECUTADO COM SUCESSO: {acao}")
+                            except:
+                                pass
+                            
+                            comando_executado = True
+                        except Exception as e:
+                            print(f"❌ ERRO AO EXECUTAR COMANDO {acao}: {e}")
+                            
+                            # Log erro
+                            try:
+                                from utils.logger_executavel import log_error
+                                log_error(f"ERRO AO EXECUTAR COMANDO {acao}: {e}")
+                            except:
+                                pass
                         
+                        # Registrar comando executado
                         self.comandos_executados.append({
                             'id': comando_id,
-                            'acao': comando_data.get('acao', ''),
-                            'timestamp': datetime.datetime.now().isoformat()
+                            'acao': acao,
+                            'origem': origem,
+                            'timestamp': datetime.datetime.now().isoformat(),
+                            'arquivo': comando_file
                         })
                         
-                        if len(self.comandos_executados) > 50:
-                            self.comandos_executados = self.comandos_executados[-50:]
+                        # Manter apenas últimos 100 comandos
+                        if len(self.comandos_executados) > 100:
+                            self.comandos_executados = self.comandos_executados[-100:]
                     
-                    # Remover arquivo de comando após execução
+                    # Remover arquivo de comando após execução (SEMPRE)
                     try:
                         os.remove(comando_file)
-                        print(f"✅ Comando executado e arquivo removido: {comando_data.get('acao', 'N/A')}")
+                        print(f"🗑️ Arquivo de comando removido: {os.path.basename(comando_file)}")
                     except Exception as e:
                         print(f"⚠️ Erro ao remover arquivo de comando: {e}")
                         
+                except json.JSONDecodeError as e:
+                    print(f"⚠️ Arquivo de comando com JSON inválido ({origem}): {e}")
+                    # Remover arquivo corrompido
+                    try:
+                        os.remove(comando_file)
+                        print(f"🗑️ Arquivo corrompido removido: {comando_file}")
+                    except:
+                        pass
                 except Exception as e:
-                    print(f"⚠️ Erro ao ler comando: {e}")
+                    print(f"⚠️ Erro ao processar comando ({origem}): {e}")
+            
+            return comando_executado
                 
         except Exception as e:
-            # Silencioso para não poluir logs
-            pass
+            # Log apenas erros críticos
+            if "No such file" not in str(e):
+                print(f"⚠️ Erro crítico verificar comandos: {e}")
+            return False
             
     def _executar_comando(self, comando_data):
         """Executa comando recebido"""
@@ -328,8 +446,18 @@ class SistemaComunicacao:
         """Reinicia aplicação"""
         print("🔄 Recebido comando: REINICIAR APP")
         import sys
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
+        
+        # Verificar se está rodando como executável
+        if getattr(sys, 'frozen', False):
+            # Executável PyInstaller
+            executable_path = sys.executable
+            print(f"🔄 Reiniciando executável: {executable_path}")
+            os.execl(executable_path, executable_path)
+        else:
+            # Script Python
+            python = sys.executable
+            print(f"🔄 Reiniciando script Python: {python} {' '.join(sys.argv)}")
+            os.execl(python, python, *sys.argv)
     
     def _comando_alterar_size(self, parametros):
         """Altera size da máquina"""
@@ -658,17 +786,44 @@ class SistemaComunicacao:
                 
             MAQUINA_ATUAL = self.machine_config.obter_configuracao_maquina()
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            screenshot_file = os.path.join(CAMINHO_REDE, f"screenshot_{MAQUINA_ATUAL}_{timestamp}.png")
             
-            # Tentar com pyautogui primeiro
+            # Tentar salvar na rede primeiro, depois local
+            screenshot_file_rede = os.path.join(CAMINHO_REDE, f"screenshot_{MAQUINA_ATUAL}_{timestamp}.png")
+            from config.settings import CAMINHO_LOCAL
+            screenshot_file_local = os.path.join(CAMINHO_LOCAL, f"screenshot_{MAQUINA_ATUAL}_{timestamp}.png")
+            
+            screenshot_file = screenshot_file_rede if os.path.exists(CAMINHO_REDE) else screenshot_file_local
+            
+            # Método 1: Tentar com pyautogui (mais confiável)
             try:
                 import pyautogui
                 screenshot = pyautogui.screenshot()
                 screenshot.save(screenshot_file)
-                print(f"📸 Screenshot salvo: {screenshot_file}")
+                print(f"📸 Screenshot salvo (pyautogui): {screenshot_file}")
+                return
             except ImportError:
-                # Fallback para Windows
+                print("⚠️ pyautogui não disponível, tentando método alternativo...")
+            except Exception as e:
+                print(f"⚠️ Erro com pyautogui: {e}")
+            
+            # Método 2: Fallback para Windows usando PIL + win32gui
+            try:
+                from PIL import ImageGrab
+                screenshot = ImageGrab.grab()
+                screenshot.save(screenshot_file)
+                print(f"📸 Screenshot salvo (PIL): {screenshot_file}")
+                return
+            except ImportError:
+                print("⚠️ PIL não disponível, tentando PowerShell...")
+            except Exception as e:
+                print(f"⚠️ Erro com PIL: {e}")
+            
+            # Método 3: Fallback para PowerShell (Windows)
+            try:
                 import subprocess
+                # Usar caminho absoluto para evitar problemas com executável
+                screenshot_file_abs = os.path.abspath(screenshot_file)
+                
                 ps_script = f"""
                 Add-Type -AssemblyName System.Windows.Forms
                 Add-Type -AssemblyName System.Drawing
@@ -676,15 +831,41 @@ class SistemaComunicacao:
                 $bitmap = New-Object System.Drawing.Bitmap $screen.Width, $screen.Height
                 $graphic = [System.Drawing.Graphics]::FromImage($bitmap)
                 $graphic.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)
-                $bitmap.Save('{screenshot_file}')
+                $bitmap.Save('{screenshot_file_abs}')
                 $graphic.Dispose()
                 $bitmap.Dispose()
+                Write-Host 'Screenshot capturado com sucesso'
                 """
-                subprocess.run(["powershell", "-Command", ps_script], timeout=30)
-                print(f"📸 Screenshot salvo (fallback): {screenshot_file}")
+                
+                resultado = subprocess.run(
+                    ["powershell", "-Command", ps_script], 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=30
+                )
+                
+                if resultado.returncode == 0 and os.path.exists(screenshot_file):
+                    print(f"📸 Screenshot salvo (PowerShell): {screenshot_file}")
+                else:
+                    print(f"❌ Erro PowerShell: {resultado.stderr}")
+                    
+            except Exception as e:
+                print(f"❌ Erro PowerShell: {e}")
+                
+            # Método 4: Último recurso - criar arquivo de texto indicando tentativa
+            try:
+                info_file = screenshot_file.replace('.png', '_info.txt')
+                with open(info_file, 'w', encoding='utf-8') as f:
+                    f.write(f"Tentativa de captura de tela\n")
+                    f.write(f"Máquina: {MAQUINA_ATUAL}\n")
+                    f.write(f"Timestamp: {timestamp}\n")
+                    f.write(f"Status: Métodos de captura não disponíveis\n")
+                print(f"📝 Arquivo de informação criado: {info_file}")
+            except Exception as e:
+                print(f"❌ Erro criar arquivo info: {e}")
                 
         except Exception as e:
-            print(f"❌ Erro capturar tela: {e}")
+            print(f"❌ Erro geral capturar tela: {e}")
 
 
 # Instância global

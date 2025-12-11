@@ -12,6 +12,8 @@ from config.constants import TABELA_SIZES
 from utils.machine_id import gerar_id_computador_avancado
 from config.settings import CAMINHO_REDE
 from gui.user_manager import gerenciar_usuarios
+from utils.log_manager import abrir_gerenciador_logs
+from utils.command_priority_system import inicializar_sistema_prioridade, obter_sistema_prioridade
 
 
 def abrir_painel_desenvolvedor(root, data_manager, machine_config: MachineConfig, batch_config: BatchConfig):
@@ -566,6 +568,310 @@ def abrir_painel_desenvolvedor(root, data_manager, machine_config: MachineConfig
         tk.Button(frm_comandos, text="📢 Enviar para TODAS as Máquinas", command=enviar_para_todas,
                  bg="#e74c3c", fg="white", font=("Arial", 10, "bold"), 
                  height=2, width=30).grid(row=4, column=1, pady=15)
+        
+        # ABA 5: GERENCIADOR DE LOGS E PRINTS
+        frame_logs = ttk.Frame(notebook_dev)
+        notebook_dev.add(frame_logs, text="📋 Logs & Prints")
+        
+        tk.Label(frame_logs, text="📋 GERENCIADOR DE LOGS E PRINTS", 
+                 font=("Arial", 14, "bold")).pack(pady=10)
+        
+        tk.Label(frame_logs, text="Visualize, filtre e gerencie todos os logs do sistema", 
+                 font=("Arial", 10), fg="#7f8c8d").pack(pady=5)
+        
+        # Informações sobre logs
+        info_logs_frame = tk.LabelFrame(frame_logs, text="ℹ️ Informações dos Logs", font=("Arial", 10, "bold"))
+        info_logs_frame.pack(fill='x', padx=20, pady=10)
+        
+        # Verificar logs existentes
+        from utils.log_manager import LogManager
+        log_manager = LogManager()
+        logs_encontrados = log_manager.encontrar_logs()
+        
+        total_logs = len(logs_encontrados)
+        total_tamanho = 0
+        tipos_logs = {}
+        
+        for log_path in logs_encontrados:
+            info_log = log_manager.obter_info_log(log_path)
+            if 'erro' not in info_log:
+                total_tamanho += info_log.get('tamanho_mb', 0)
+                tipo = info_log.get('tipo', 'GERAL')
+                tipos_logs[tipo] = tipos_logs.get(tipo, 0) + 1
+        
+        tk.Label(info_logs_frame, text=f"📊 Total de arquivos de log: {total_logs}", 
+                 font=("Arial", 10)).pack(anchor='w', padx=10, pady=2)
+        
+        tk.Label(info_logs_frame, text=f"💾 Tamanho total: {total_tamanho:.1f} MB", 
+                 font=("Arial", 10)).pack(anchor='w', padx=10, pady=2)
+        
+        if tipos_logs:
+            tk.Label(info_logs_frame, text="📂 Tipos de logs encontrados:", 
+                     font=("Arial", 10, "bold")).pack(anchor='w', padx=10, pady=(10, 2))
+            
+            for tipo, count in tipos_logs.items():
+                tk.Label(info_logs_frame, text=f"  • {tipo}: {count} arquivo(s)", 
+                         font=("Arial", 9), fg="#666").pack(anchor='w', padx=20, pady=1)
+        
+        # Botões de ação
+        buttons_frame = tk.Frame(frame_logs)
+        buttons_frame.pack(pady=20)
+        
+        def abrir_gerenciador_completo():
+            """Abre o gerenciador completo de logs"""
+            try:
+                abrir_gerenciador_logs(dev_win)
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao abrir gerenciador de logs:\n{e}")
+        
+        def abrir_pasta_logs():
+            """Abre pasta de logs no explorador"""
+            try:
+                import os
+                os.startfile(log_manager.log_dir)
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao abrir pasta de logs:\n{e}")
+        
+        def limpar_logs_antigos():
+            """Limpa logs antigos"""
+            try:
+                import tkinter.simpledialog as simpledialog
+                dias = simpledialog.askinteger(
+                    "Limpar Logs Antigos",
+                    "Excluir logs mais antigos que quantos dias?",
+                    initialvalue=30,
+                    minvalue=1,
+                    maxvalue=365
+                )
+                
+                if dias:
+                    removidos = log_manager.limpar_logs_antigos(dias)
+                    messagebox.showinfo("Concluído", 
+                                      f"Removidos {removidos} logs antigos.\n"
+                                      f"Backups criados automaticamente.")
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao limpar logs:\n{e}")
+        
+        # Botões principais
+        tk.Button(buttons_frame, text="🔧 Abrir Gerenciador Completo", 
+                  command=abrir_gerenciador_completo,
+                  bg="#3498db", fg="white", font=("Arial", 12, "bold"), 
+                  height=2, width=25).pack(pady=5)
+        
+        tk.Button(buttons_frame, text="📁 Abrir Pasta de Logs", 
+                  command=abrir_pasta_logs,
+                  bg="#f39c12", fg="white", font=("Arial", 11, "bold"), 
+                  height=2, width=25).pack(pady=5)
+        
+        tk.Button(buttons_frame, text="🧹 Limpar Logs Antigos", 
+                  command=limpar_logs_antigos,
+                  bg="#e74c3c", fg="white", font=("Arial", 11, "bold"), 
+                  height=2, width=25).pack(pady=5)
+        
+        # Visualização rápida dos últimos logs
+        preview_frame = tk.LabelFrame(frame_logs, text="👁️ Visualização Rápida - Últimos Logs", 
+                                     font=("Arial", 10, "bold"))
+        preview_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Lista dos últimos logs
+        logs_listbox = tk.Listbox(preview_frame, height=8, font=("Courier", 9))
+        logs_scroll = tk.Scrollbar(preview_frame, orient=tk.VERTICAL, command=logs_listbox.yview)
+        logs_listbox.configure(yscrollcommand=logs_scroll.set)
+        
+        logs_listbox.pack(side=tk.LEFT, fill='both', expand=True, padx=5, pady=5)
+        logs_scroll.pack(side=tk.RIGHT, fill='y', pady=5)
+        
+        # Preencher lista com logs recentes
+        for i, log_path in enumerate(logs_encontrados[:10]):  # Mostrar apenas os 10 mais recentes
+            info_log = log_manager.obter_info_log(log_path)
+            if 'erro' not in info_log:
+                nome = info_log['nome']
+                tipo = info_log['tipo']
+                tamanho = f"{info_log['tamanho_kb']:.1f}KB"
+                modificado = info_log['modificado_str']
+                
+                linha = f"{nome:<30} | {tipo:<10} | {tamanho:<8} | {modificado}"
+                logs_listbox.insert(tk.END, linha)
+        
+        # ABA 6: COMANDOS PRIORITÁRIOS
+        frame_priority = ttk.Frame(notebook_dev)
+        notebook_dev.add(frame_priority, text="🚨 Comandos Prioritários")
+        
+        tk.Label(frame_priority, text="🚨 SISTEMA DE COMANDOS PRIORITÁRIOS", 
+                 font=("Arial", 14, "bold")).pack(pady=10)
+        
+        tk.Label(frame_priority, text="Comandos do desenvolvedor têm prioridade MÁXIMA e são executados imediatamente", 
+                 font=("Arial", 10), fg="#e74c3c").pack(pady=5)
+        
+        # Inicializar sistema de prioridade se não estiver ativo
+        maquina_atual = machine_config.obter_configuracao_maquina()
+        sistema_prioridade = obter_sistema_prioridade()
+        
+        if not sistema_prioridade:
+            try:
+                sistema_prioridade = inicializar_sistema_prioridade(maquina_atual)
+                print(f"🎯 Sistema de prioridade inicializado para máquina {maquina_atual}")
+            except Exception as e:
+                print(f"❌ Erro ao inicializar sistema de prioridade: {e}")
+        
+        # Status do sistema
+        status_frame = tk.LabelFrame(frame_priority, text="📊 Status do Sistema de Prioridade", 
+                                   font=("Arial", 10, "bold"))
+        status_frame.pack(fill='x', padx=20, pady=10)
+        
+        def atualizar_status_prioridade():
+            """Atualiza informações do sistema de prioridade"""
+            if sistema_prioridade:
+                status = sistema_prioridade.obter_status()
+                
+                status_text = f"""
+🎯 Máquina: {status['maquina_id']}
+⚡ Sistema Ativo: {'Sim' if sistema_prioridade.thread_monitor and sistema_prioridade.thread_monitor.is_alive() else 'Não'}
+🔄 Executando: {'Sim' if status['executando'] else 'Não'}
+📋 Comandos na Fila: {status['fila_comandos']}
+📊 Total Executados: {status['total_executados']}
+"""
+                
+                if 'comando_atual' in status and status['comando_atual']:
+                    cmd_atual = status['comando_atual']
+                    status_text += f"⚡ Comando Atual: {cmd_atual.get('acao', 'N/D')}\n"
+                
+                status_label.config(text=status_text)
+            else:
+                status_label.config(text="❌ Sistema de prioridade não inicializado")
+        
+        status_label = tk.Label(status_frame, text="Carregando...", font=("Courier", 9), 
+                               justify='left', anchor='w')
+        status_label.pack(anchor='w', padx=10, pady=5)
+        
+        # Botão para atualizar status
+        tk.Button(status_frame, text="🔄 Atualizar Status", 
+                  command=atualizar_status_prioridade,
+                  bg="#17a2b8", fg="white", font=("Arial", 9)).pack(anchor='e', padx=10, pady=5)
+        
+        # Envio de comandos prioritários
+        cmd_priority_frame = tk.LabelFrame(frame_priority, text="🚨 Enviar Comando Prioritário", 
+                                         font=("Arial", 10, "bold"))
+        cmd_priority_frame.pack(fill='x', padx=20, pady=10)
+        
+        tk.Label(cmd_priority_frame, text="⚠️ ATENÇÃO: Comandos enviados aqui têm PRIORIDADE MÁXIMA", 
+                 font=("Arial", 9, "bold"), fg="#e74c3c").pack(pady=5)
+        
+        # Seleção de comando prioritário
+        cmd_frame = tk.Frame(cmd_priority_frame)
+        cmd_frame.pack(fill='x', padx=10, pady=10)
+        
+        tk.Label(cmd_frame, text="Comando:", font=("Arial", 10)).grid(row=0, column=0, sticky='w', padx=5)
+        
+        priority_cmd_var = tk.StringVar()
+        priority_commands = [
+            "fechar_app",
+            "reiniciar_app", 
+            "parar_sistema",
+            "emergencia_parar",
+            "diagnostico_completo",
+            "obter_logs",
+            "capturar_tela",
+            "coletar_informacoes_sistema"
+        ]
+        
+        priority_combo = ttk.Combobox(cmd_frame, textvariable=priority_cmd_var, 
+                                    values=priority_commands, state="readonly", width=25)
+        priority_combo.grid(row=0, column=1, padx=5)
+        
+        tk.Label(cmd_frame, text="Parâmetros:", font=("Arial", 10)).grid(row=1, column=0, sticky='nw', padx=5, pady=5)
+        
+        priority_params_text = tk.Text(cmd_frame, width=40, height=4, font=("Courier", 9))
+        priority_params_text.grid(row=1, column=1, padx=5, pady=5)
+        priority_params_text.insert('1.0', '{}')
+        
+        def enviar_comando_prioritario():
+            """Envia comando com prioridade máxima"""
+            if not sistema_prioridade:
+                messagebox.showerror("Erro", "Sistema de prioridade não está ativo!")
+                return
+            
+            comando = priority_cmd_var.get()
+            if not comando:
+                messagebox.showerror("Erro", "Selecione um comando!")
+                return
+            
+            try:
+                params_str = priority_params_text.get('1.0', 'end').strip()
+                parametros = json.loads(params_str) if params_str else {}
+            except json.JSONDecodeError:
+                messagebox.showerror("Erro", "Parâmetros JSON inválidos!")
+                return
+            
+            try:
+                comando_id = sistema_prioridade.enviar_comando_desenvolvedor(comando, parametros)
+                
+                messagebox.showinfo("✅ Comando Enviado", 
+                                  f"Comando prioritário enviado!\n\n"
+                                  f"🚨 Comando: {comando}\n"
+                                  f"🆔 ID: {comando_id[:8]}...\n"
+                                  f"⚡ Prioridade: MÁXIMA\n\n"
+                                  f"O comando será executado IMEDIATAMENTE!")
+                
+                # Atualizar status
+                atualizar_status_prioridade()
+                
+            except Exception as e:
+                messagebox.showerror("Erro", f"Falha ao enviar comando:\n{e}")
+        
+        tk.Button(cmd_priority_frame, text="🚨 ENVIAR COMANDO PRIORITÁRIO", 
+                  command=enviar_comando_prioritario,
+                  bg="#dc3545", fg="white", font=("Arial", 12, "bold"), 
+                  height=2, width=30).pack(pady=15)
+        
+        # Log de comandos executados
+        log_frame = tk.LabelFrame(frame_priority, text="📜 Log de Comandos Executados", 
+                                font=("Arial", 10, "bold"))
+        log_frame.pack(fill='both', expand=True, padx=20, pady=10)
+        
+        # Lista de comandos
+        cmd_log_listbox = tk.Listbox(log_frame, height=8, font=("Courier", 8))
+        cmd_log_scroll = tk.Scrollbar(log_frame, orient=tk.VERTICAL, command=cmd_log_listbox.yview)
+        cmd_log_listbox.configure(yscrollcommand=cmd_log_scroll.set)
+        
+        cmd_log_listbox.pack(side=tk.LEFT, fill='both', expand=True, padx=5, pady=5)
+        cmd_log_scroll.pack(side=tk.RIGHT, fill='y', pady=5)
+        
+        def atualizar_log_comandos():
+            """Atualiza log de comandos executados"""
+            cmd_log_listbox.delete(0, tk.END)
+            
+            if sistema_prioridade:
+                comandos = sistema_prioridade.obter_log_comandos(20)  # Últimos 20
+                
+                for cmd in reversed(comandos):  # Mais recentes primeiro
+                    acao = cmd.get('acao', 'N/D')
+                    status = cmd.get('status', 'N/D')
+                    tempo = cmd.get('tempo_execucao', 0)
+                    prioridade = cmd.get('prioridade', 0)
+                    
+                    # Emoji baseado no status
+                    emoji = "✅" if status == "sucesso" else "❌"
+                    
+                    # Emoji baseado na prioridade
+                    if prioridade >= 100:
+                        priority_emoji = "🚨"
+                    elif prioridade >= 10:
+                        priority_emoji = "⚡"
+                    else:
+                        priority_emoji = "📝"
+                    
+                    linha = f"{emoji} {priority_emoji} {acao:<20} | {status:<8} | {tempo:.3f}s"
+                    cmd_log_listbox.insert(tk.END, linha)
+        
+        # Botão para atualizar log
+        tk.Button(log_frame, text="🔄 Atualizar Log", 
+                  command=atualizar_log_comandos,
+                  bg="#28a745", fg="white", font=("Arial", 9)).pack(anchor='e', padx=5, pady=2)
+        
+        # Atualizar status inicial
+        atualizar_status_prioridade()
+        atualizar_log_comandos()
         
         # Centralizar janela
         dev_win.update_idletasks()

@@ -14,6 +14,47 @@ os.environ['TK_SILENCE_DEPRECATION'] = '1'
 
 print("🚀 Iniciando sistema otimizado...")
 
+# Inicializar sistema de logs para executável
+try:
+    from utils.logger_executavel import inicializar_logger, log_info, log_error, get_log_path
+    logger = inicializar_logger()
+    log_info("Sistema de logs inicializado")
+    log_info(f"Arquivo de log: {get_log_path()}")
+    print(f"📝 Logs salvos em: {get_log_path()}")
+except Exception as e:
+    print(f"⚠️ Erro ao inicializar logs: {e}")
+
+# Configuração específica para executáveis
+try:
+    from config_executavel import (
+        detectar_ambiente, 
+        configurar_paths_executavel,
+        verificar_dependencias_executavel,
+        configurar_sistema_comunicacao_executavel
+    )
+    
+    # Detectar ambiente e configurar se necessário
+    ambiente = detectar_ambiente()
+    if ambiente['is_executable']:
+        print("🔧 MODO EXECUTÁVEL DETECTADO - Configurando...")
+        configurar_paths_executavel()
+        deps = verificar_dependencias_executavel()
+        config_com = configurar_sistema_comunicacao_executavel()
+        
+        if not deps['criticas_ok']:
+            print("❌ DEPENDÊNCIAS CRÍTICAS FALTANDO!")
+            for dep in deps['criticas_faltando']:
+                print(f"   ❌ {dep}")
+        else:
+            print("✅ Todas as dependências críticas disponíveis")
+    else:
+        print("🐍 Modo desenvolvimento detectado")
+        
+except ImportError:
+    print("⚠️ Configuração de executável não disponível")
+except Exception as e:
+    print(f"⚠️ Erro na configuração de executável: {e}")
+
 from config import CAMINHO_REDE, CAMINHO_LOCAL, VERSION
 from data.manager import DataManager
 from models.machine import MachineConfig
@@ -40,17 +81,6 @@ set_log_manager(data_manager)
 machine_config = MachineConfig()
 batch_config = BatchConfig()
 user_manager = UserManager(data_manager)
-
-def diagnostico_inicial():
-    """Diagnóstico inicial do sistema"""
-    print("🔍 DIAGNÓSTICO INICIAL DO SISTEMA")
-    print(f"✅ Python: {sys.version}")
-    print(f"✅ Diretório atual: {os.getcwd()}")
-    print(f"✅ Caminho do executável: {sys.executable if getattr(sys, 'frozen', False) else 'Rodando como .py'}")
-    print(f"✅ Caminho base: {CAMINHO_LOCAL}")
-    print(f"✅ Acesso à rede: {'SIM' if testar_acesso_rede() else 'NÃO'}")
-    print(f"✅ Caminho rede: {CAMINHO_REDE if os.path.exists(CAMINHO_REDE) else 'Não acessível'}")
-    print("🔍 Fim do diagnóstico")
 
 def configurar_maquina_inicial():
     """Configura a máquina antes de qualquer operação"""
@@ -131,10 +161,47 @@ def diagnostico_inicial():
     print("🔍 DIAGNÓSTICO INICIAL DO SISTEMA")
     print(f"✅ Python: {sys.version}")
     print(f"✅ Diretório atual: {os.getcwd()}")
-    print(f"✅ Caminho do executável: {sys.executable if getattr(sys, 'frozen', False) else 'Rodando como .py'}")
+    
+    # Detectar tipo de execução
+    if getattr(sys, 'frozen', False):
+        print(f"🔧 Executável: {sys.executable}")
+        print(f"📁 Diretório do executável: {os.path.dirname(sys.executable)}")
+        print("🎯 Modo: EXECUTÁVEL (.exe)")
+    else:
+        print(f"🐍 Script Python: {__file__}")
+        print(f"🐍 Interpretador: {sys.executable}")
+        print("🎯 Modo: DESENVOLVIMENTO (.py)")
+    
     print(f"✅ Caminho base: {CAMINHO_LOCAL}")
     print(f"✅ Acesso à rede: {'SIM' if testar_acesso_rede() else 'NÃO'}")
     print(f"✅ Caminho rede: {CAMINHO_REDE if os.path.exists(CAMINHO_REDE) else 'Não acessível'}")
+    
+    # Verificar dependências críticas
+    try:
+        import psutil
+        print("✅ psutil: Disponível")
+    except ImportError:
+        print("❌ psutil: NÃO DISPONÍVEL")
+    
+    try:
+        import pandas
+        print("✅ pandas: Disponível")
+    except ImportError:
+        print("❌ pandas: NÃO DISPONÍVEL")
+    
+    # Verificar bibliotecas opcionais
+    try:
+        import pyautogui
+        print("✅ pyautogui: Disponível (captura de tela)")
+    except ImportError:
+        print("⚠️ pyautogui: Não disponível (fallback ativo)")
+    
+    try:
+        from PIL import Image
+        print("✅ PIL: Disponível (captura de tela)")
+    except ImportError:
+        print("⚠️ PIL: Não disponível (fallback ativo)")
+    
     print("🔍 Fim do diagnóstico")
 
 if __name__ == "__main__":
@@ -200,8 +267,31 @@ if __name__ == "__main__":
                  font=("Arial", 10), bg='white', fg='#e74c3c').pack(anchor='w', pady=2)
         tk.Label(info_content, text=f"👥 Usuários: {len(data_manager.df_users)} cadastrados", 
                  font=("Arial", 9), bg='white', fg='#7f8c8d').pack(anchor='w', pady=2)
-        tk.Label(info_content, text="🟢 Sistema Ativo", 
-                 font=("Arial", 9, "bold"), bg='white', fg='#27ae60').pack(anchor='w', pady=2)
+        
+        # Label para status de comunicação (será atualizado dinamicamente)
+        status_comunicacao_label = tk.Label(info_content, text="🔄 Iniciando comunicação...", 
+                                          font=("Arial", 9, "bold"), bg='white', fg='#f39c12')
+        status_comunicacao_label.pack(anchor='w', pady=2)
+        
+        def atualizar_status_comunicacao():
+            """Atualiza o status da comunicação na interface"""
+            try:
+                if sistema_comunicacao.executando_comandos:
+                    status_text = "🟢 Comunicação ATIVA (1ms)"
+                    cor = '#27ae60'
+                else:
+                    status_text = "🔴 Comunicação INATIVA"
+                    cor = '#e74c3c'
+                
+                status_comunicacao_label.config(text=status_text, fg=cor)
+                
+                # Atualizar novamente em 2 segundos
+                root.after(2000, atualizar_status_comunicacao)
+            except:
+                pass
+        
+        # Iniciar atualização do status
+        root.after(1000, atualizar_status_comunicacao)
         
         # Botões principais
         botoes_card = tk.LabelFrame(main_frame, text="🎯 Ações Principais", 
@@ -276,6 +366,44 @@ if __name__ == "__main__":
                  command=lambda: messagebox.showinfo("Logs", f"Total: {len(data_manager.df_log)} registros"),
                  bg="#34495e", fg="white", **btn_admin_style).pack(pady=3, fill='x')
         
+        def testar_sistema_comunicacao():
+            """Testa o sistema de comunicação"""
+            status = sistema_comunicacao.verificar_status_comunicacao()
+            
+            info = f"""SISTEMA DE COMUNICAÇÃO:
+            
+✅ Status: {'ATIVO' if status['ativo'] else 'INATIVO'}
+🧵 Thread: {'VIVA' if status['thread_viva'] else 'MORTA'}
+⚡ Comandos executados: {status['comandos_executados']}
+📊 Último status: {status['ultimo_status']}
+
+CONFIGURAÇÃO:
+🏭 Máquina: {MAQUINA_ATUAL}
+📏 Size: {CONFIG_SIZE['size']} | Peso: {CONFIG_SIZE['peso']}
+
+VERIFICAÇÃO:
+🔍 Comandos verificados a cada 1ms (1000x/segundo)
+📡 Status enviado a cada 1 segundo
+🎯 Pronto para receber comandos remotos!"""
+            
+            messagebox.showinfo("Sistema de Comunicação", info)
+        
+        tk.Button(admin_content, text="📡 Testar Comunicação", 
+                 command=testar_sistema_comunicacao,
+                 bg="#17a2b8", fg="white", **btn_admin_style).pack(pady=3, fill='x')
+        
+        def abrir_logs():
+            """Abre visualizador de logs"""
+            try:
+                from gui.visualizar_logs import abrir_visualizador_logs
+                abrir_visualizador_logs(root)
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao abrir logs: {e}")
+        
+        tk.Button(admin_content, text="📋 Ver Logs Detalhados", 
+                 command=abrir_logs,
+                 bg="#6f42c1", fg="white", **btn_admin_style).pack(pady=3, fill='x')
+        
         # Controles do sistema
         controles_frame = tk.Frame(main_frame, bg='#ecf0f1')
         controles_frame.pack(fill='x', pady=(10, 0))
@@ -297,19 +425,90 @@ if __name__ == "__main__":
             try:
                 import subprocess
                 import os
-                dash_path = os.path.join(os.path.dirname(__file__), "dash.py")
-                if os.path.exists(dash_path):
-                    subprocess.Popen(["python", dash_path])
-                    messagebox.showinfo("Dashboard", "Dashboard iniciado em nova janela!")
+                
+                # Detectar se está rodando como executável
+                if getattr(sys, 'frozen', False):
+                    # Executável - procurar dash.py no mesmo diretório
+                    base_dir = os.path.dirname(sys.executable)
+                    dash_path = os.path.join(base_dir, "dash.py")
+                    
+                    if os.path.exists(dash_path):
+                        # Tentar executar com python
+                        subprocess.Popen(["python", dash_path])
+                        messagebox.showinfo("Dashboard", "Dashboard iniciado em nova janela!")
+                    else:
+                        # Procurar executável do dashboard
+                        dash_exe = os.path.join(base_dir, "dash.exe")
+                        if os.path.exists(dash_exe):
+                            subprocess.Popen([dash_exe])
+                            messagebox.showinfo("Dashboard", "Dashboard iniciado em nova janela!")
+                        else:
+                            messagebox.showwarning("Aviso", 
+                                                 f"Dashboard não encontrado.\n"
+                                                 f"Procurado em:\n"
+                                                 f"- {dash_path}\n"
+                                                 f"- {dash_exe}")
                 else:
-                    messagebox.showerror("Erro", f"Arquivo dash.py não encontrado em:\n{dash_path}")
+                    # Script Python - usar caminho relativo
+                    dash_path = os.path.join(os.path.dirname(__file__), "dash.py")
+                    if os.path.exists(dash_path):
+                        subprocess.Popen(["python", dash_path])
+                        messagebox.showinfo("Dashboard", "Dashboard iniciado em nova janela!")
+                    else:
+                        messagebox.showerror("Erro", f"Arquivo dash.py não encontrado em:\n{dash_path}")
+                        
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao abrir dashboard: {e}")
         
-        # Iniciar sistema de comunicação em tempo real
+        # Iniciar sistema de comunicação em tempo real ULTRA-RÁPIDO
+        print("🚀 Iniciando sistema de comunicação ultra-rápido...")
         sistema_comunicacao.set_root_reference(root)
         sistema_comunicacao.set_configs(machine_config, batch_config, data_manager)
-        sistema_comunicacao.iniciar_sistema_comunicacao()
+        
+        # Garantir que o sistema de comunicação inicie
+        try:
+            sistema_comunicacao.iniciar_sistema_comunicacao()
+            print("✅ Sistema de comunicação iniciado com sucesso!")
+            print("📡 Verificando comandos a cada 1 milissegundo (1000x por segundo)")
+            print("📊 Enviando status a cada 1 segundo")
+            print(f"🎯 Máquina {MAQUINA_ATUAL} pronta para receber comandos remotos")
+        except Exception as e:
+            print(f"❌ ERRO ao iniciar comunicação: {e}")
+            messagebox.showwarning("Aviso", f"Sistema de comunicação com problemas: {e}")
+        
+        # Teste inicial de comunicação
+        def testar_comunicacao_inicial():
+            """Testa se o sistema de comunicação está funcionando"""
+            try:
+                if sistema_comunicacao.executando_comandos:
+                    print("✅ Sistema de comunicação ATIVO e funcionando")
+                else:
+                    print("⚠️ Sistema de comunicação NÃO está ativo")
+                    # Tentar reiniciar
+                    sistema_comunicacao.iniciar_sistema_comunicacao()
+            except Exception as e:
+                print(f"⚠️ Erro no teste de comunicação: {e}")
+        
+        # Executar teste após 2 segundos
+        root.after(2000, testar_comunicacao_inicial)
+        
+        # Monitoramento contínuo do sistema de comunicação
+        def monitorar_comunicacao():
+            """Monitora e garante que o sistema de comunicação esteja sempre ativo"""
+            try:
+                if not sistema_comunicacao.executando_comandos:
+                    print("⚠️ Sistema de comunicação PARADO! Reiniciando...")
+                    sistema_comunicacao.iniciar_sistema_comunicacao()
+                    print("🔄 Sistema de comunicação REINICIADO")
+                
+                # Verificar novamente em 10 segundos
+                root.after(10000, monitorar_comunicacao)
+            except Exception as e:
+                print(f"⚠️ Erro no monitoramento: {e}")
+                root.after(10000, monitorar_comunicacao)
+        
+        # Iniciar monitoramento após 5 segundos
+        root.after(5000, monitorar_comunicacao)
         
         # Criar janela de registro FIXA (NUNCA FECHA)
         criar_janela_registro_fixa(root, machine_config, batch_config, data_manager)

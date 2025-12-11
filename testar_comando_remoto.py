@@ -93,6 +93,8 @@ if __name__ == "__main__":
     print(" 11. obter_logs - Obtém logs do sistema")
     print(" 12. diagnostico_completo - Executa diagnóstico completo")
     print(" 13. limpar_cache - Limpa cache e arquivos temporários")
+    print(" 14. capturar_tela - Captura screenshot da máquina")
+    print(" 15. executar_comando_sistema - Executa comando do sistema operacional")
     print()
     
     acao = input("Digite o número ou nome do comando: ").strip()
@@ -111,7 +113,9 @@ if __name__ == "__main__":
         "10": "testar_conectividade",
         "11": "obter_logs",
         "12": "diagnostico_completo",
-        "13": "limpar_cache"
+        "13": "limpar_cache",
+        "14": "capturar_tela",
+        "15": "executar_comando_sistema"
     }
     
     if acao in acoes_map:
@@ -138,6 +142,10 @@ if __name__ == "__main__":
     elif acao == "fechar_app":
         forcar = input("Forçar fechamento? (s/n, padrão: n): ").strip().lower() == 's'
         parametros = {'forcar': forcar}
+    
+    elif acao == "executar_comando_sistema":
+        comando = input("Digite o comando do sistema para executar: ").strip()
+        parametros = {'comando': comando}
     
     print()
     print("="*60)

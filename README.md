@@ -1,6 +1,6 @@
 # 🏭 Sistema de Coleta de Produção Industrial
 
-> **Sistema enterprise de coleta e análise de dados de produção com arquitetura robusta, auditoria imutável e comunicação em tempo real**
+> **Sistema enterprise completo com IA, gerenciamento de logs avançado e comandos prioritários para controle total da produção**
 
 [![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Architecture](https://img.shields.io/badge/Architecture-MVC-orange?style=for-the-badge)](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller)
