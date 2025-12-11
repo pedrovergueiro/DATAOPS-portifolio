@@ -9,6 +9,23 @@
 
 ---
 
+## 📸 Demonstração
+
+### Interface Principal
+- 🖥️ **Sistema de Produção** - Interface intuitiva para operadores
+- 💻 **Painel Desenvolvedor** - 6 abas com controle total do sistema
+- 📋 **Gerenciador de Logs** - Visualização e filtros avançados
+- 🚨 **Comandos Prioritários** - Execução imediata com prioridade máxima
+- 🤖 **IA Integrada** - Análises preditivas e recomendações
+
+### Funcionalidades em Ação
+- ⚡ **Comunicação 1ms** - Status em tempo real entre máquinas
+- 🔐 **Auditoria SHA-256** - Integridade garantida de todos os dados
+- 🎯 **Controle Remoto** - Comandos para múltiplas máquinas simultaneamente
+- 📊 **Dashboard IA** - Predições com 75-85% de precisão
+
+---
+
 ## 🎯 Visão Geral
 
 Sistema **enterprise-grade** desenvolvido para ambientes industriais críticos, implementando **arquitetura escalável**, **auditoria imutável** com hash criptográfico e **comunicação em tempo real** (1ms) entre múltiplas máquinas.
@@ -245,38 +262,52 @@ with open(status_file_rede, 'w') as f:
 
 ---
 
-## 🚀 Instalação e Uso
+## 🚀 Quick Start
 
-### Pré-requisitos
-
-```bash
-Python 3.8+
-pip
-```
-
-### Instalação
+### ⚡ Execução Rápida (3 passos)
 
 ```bash
-# Clone o repositório
-git clone https://github.com/pedrovergueiro/DATAOPS-portifolio.git
-cd DATAOPS-portifolio
+# 1. Clone e entre no diretório
+git clone https://github.com/pedrovergueiro/DATAOPS-portifolio.git && cd DATAOPS-portifolio
 
-# Instale as dependências
+# 2. Instale dependências
 pip install -r requirements.txt
 
-# Configure os arquivos iniciais
-cp config_maquina.json.example config_maquina.json
-cp usuarios.csv.example usuarios.csv
-
-# Execute o sistema
+# 3. Execute o sistema
 python main.py
 ```
+
+### 🎯 Acesso às Funcionalidades Avançadas
+
+```bash
+# No sistema, clique em "💻 Painel Desenvolvedor"
+# Senha: 010524Np@
+# 
+# Explore as 6 abas:
+# ⚙️ Configurações Avançadas
+# ℹ️ Informações do Sistema  
+# 👥 Usuários
+# 🌐 Controle Remoto
+# 📋 Logs & Prints (NOVO!)
+# 🚨 Comandos Prioritários (NOVO!)
+# 🤖 IA & Machine Learning
+```
+
+### 📋 Pré-requisitos
+
+- **Python 3.8+** 
+- **pip** (gerenciador de pacotes)
+- **Windows/Linux/macOS** (multiplataforma)
 
 ### Teste
 
 ```bash
-# Execute os testes
-python testar_sistema.py
+# Execute o sistema
+python main.py
+
+# Teste funcionalidades específicas
+python testar_comando_remoto.py
+python testar_executavel_comandos.py
 ```
 
 ---
@@ -365,21 +396,23 @@ sistema-producao/
 ## 🧪 Testes
 
 ```bash
-# Teste do sistema
-python testar_sistema.py
+# Teste do sistema principal
+python main.py
 
-# Verificar integridade
-python -c "from utils.auditoria import verificar_integridade_auditoria; print(verificar_integridade_auditoria())"
+# Testar comandos remotos
+python testar_comando_remoto.py
+
+# Verificar integridade do sistema
+python -c "from data.manager import DataManager; dm = DataManager(); print('✅ Sistema OK')"
 ```
 
 ---
 
 ## 📚 Documentação
 
-- 📄 [Guia de Instalação](INSTALL.md)
-- 📄 [Guia de Contribuição](CONTRIBUTING.md)
 - 📄 [Changelog](CHANGELOG.md)
-- 📄 [Documentação Completa](docs/)
+- 📄 [Documentação Completa](DOCUMENTACAO_COMPLETA.md)
+- 📄 [Arquitetura](docs/ARCHITECTURE.md)
 
 ---
 
@@ -431,7 +464,7 @@ python -c "from utils.auditoria import verificar_integridade_auditoria; print(ve
 
 ## 🤝 Contribuindo
 
-Contribuições são bem-vindas! Veja [CONTRIBUTING.md](CONTRIBUTING.md) para detalhes.
+Contribuições são bem-vindas! Abra uma issue ou pull request para contribuir.
 
 ---
 
@@ -453,8 +486,8 @@ Este projeto está sob a licença MIT. Veja [LICENSE](LICENSE) para mais detalhe
 ### 🔗 Contato
 
 - GitHub: [@pedrovergueiro](https://github.com/pedrovergueiro)
-- LinkedIn: [Pedro Vergueiro](https://linkedin.com/in/pedrovergueiro)
-- Email: pedro.vergueiro@example.com
+- LinkedIn: [Pedro Vergueiro](https://www.linkedin.com/in/pedro-vergueiro/)
+- Portfolio: [GitHub](https://github.com/pedrovergueiro)
 
 ---
 
